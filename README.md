@@ -211,7 +211,7 @@ safe-change install all
 | Gemini CLI | `gemini-cli` | `.gemini/skills/safe-change/` | `~/.gemini/skills/safe-change/` |
 | GitHub Copilot | `github-copilot` | `.github/skills/safe-change/` | `~/.github/skills/safe-change/` |
 
-> **Note on verification status:** All agents currently ship with `filesystem-validated` status, meaning safe-change has been verified to correctly install, read, and remove skill files at each agent's expected path. Full runtime verification (confirming that each agent actively discovers and invokes the skill during a live session) is tracked per-agent and will land in subsequent releases. If you encounter an agent that does not pick up the installed skill, please [open an issue](https://github.com/zackpratamaa/safe-change/issues).
+> **Note on verification status:** All listed agents currently ship with `filesystem-validated` status: their adapters are validated for installing, reading, and removing skill files at the expected paths. MCP server tests validate protocol/tool behavior separately; they do not establish live integration with every agent. Per-agent MCP runtime and skill auto-invocation remain **pending evidence** until a reproducible session record is linked in [docs/runtime-verification.md](docs/runtime-verification.md). Muse Code is not yet a listed, runtime-verified integration. If an agent does not pick up the installed skill, please [open an issue](https://github.com/zackpratamaa/safe-change/issues).
 
 ### Enterprise skill policy
 
