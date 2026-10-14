@@ -1,0 +1,65 @@
+[
+  {
+    "repository": "https://github.com/obra/superpowers",
+    "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+    "licenseReviewed": "MIT",
+    "researchUse": "Fresh evidence, startup/compaction context restoration",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/anthropics/skills",
+    "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+    "licenseReviewed": "mixed; frontend-design Apache-2.0",
+    "researchUse": "Specialized quality guidance; context-sensitive design review",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/bmad-code-org/BMAD-METHOD",
+    "commit": "8f0d50e1817fdd8fcf05a20c524218222d13cd8d",
+    "licenseReviewed": "MIT; trademark notice",
+    "researchUse": "Separate decisions, visual contracts and behavioral UX contracts",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/affaan-m/ECC",
+    "commit": "b92f181b3b748d1abbc2afd94af6aa7d8c8fca29",
+    "licenseReviewed": "MIT",
+    "researchUse": "Lifecycle hooks, fail-closed incomplete input, platform limits",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/github/spec-kit",
+    "commit": "96774bc52fd7dccc7185791e1cac7572b9e09dea",
+    "licenseReviewed": "MIT",
+    "researchUse": "Requirements-to-check traceability and unrequested-work detection",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/ruvnet/ruflo",
+    "commit": "55e2c9011c20d25e347a175427ca8084dacde40c",
+    "licenseReviewed": "MIT",
+    "researchUse": "Separate autonomy, confirmation and human stop controls",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/Fission-AI/OpenSpec",
+    "commit": "9111a7654d7800391459431fff4eaf66e33a3d2e",
+    "licenseReviewed": "MIT",
+    "researchUse": "Scoped change contract and explicit repository boundaries",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/code-yeongyu/oh-my-openagent",
+    "commit": "cd31c31b6d00f84b1e4f5a2b4a2db4b116fbfc90",
+    "licenseReviewed": "SUL-1.0; restricted",
+    "researchUse": "Concept-only review of stale edits, continuation and instruction/enforcement separation",
+    "codeCopied": false
+  },
+  {
+    "repository": "https://github.com/wshobson/agents",
+    "commit": "46891e7e60da0e52baf1050b7b6391b64e84c6d9",
+    "licenseReviewed": "MIT; external plugins separate",
+    "researchUse": "Capability matrix and modular, bounded quality evaluation",
+    "codeCopied": false
+  }
+]

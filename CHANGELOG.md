@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomically replace verification summaries.
 
 ### Added
+- Experimental `session` lifecycle: change contracts, expiring human timing choice, observer heartbeat, scope/oracle gates, and binding to existing verification evidence.
+- Interactive-only timing-choice command; no agent-facing MCP consent setter. This is cooperative workflow state, not authenticated human approval.
+- Claude-compatible hook output adapter with explicit protocol-only validation limits; no automatic hook installation.
+- Nine-repository research provenance and delivery-boundary ledger; no vendored reference frameworks or license change.
 - `check --strict` and MCP `safe_change_check` `strict: true` for a verified-only gate, while preserving legacy plain-check exit behavior and replay's strict alias.
 - Regression coverage for stale evidence, source mutation, oracle weakening, configuration removal, fail-fail gate behavior, and deletion.
 - Explicit verification-integrity documentation covering migration and cooperative trust boundaries.

@@ -7,6 +7,13 @@ Status labels: Done | In Progress | Planned
 
 ---
 
+## Next increment — Task-aware agent supervision (Unreleased)
+
+- Implemented in source: literal change contracts, expiring verification-timing choices, durable task state, foreground observation with heartbeat health, scope/protected-input gates and current-evidence binding.
+- Experimental: Claude-compatible edit/stop hook output; protocol/CLI tests only. No live IDE or universal hook enforcement claim.
+- Planned: authenticated native consent UI, automatic reviewed per-host integration, watcher supervision, specialized code/security/license quality modules, UI/UX contract evaluation, performance/cost budgets and Meta integration.
+- [Usage and boundaries](docs/task-sessions.md); [reference provenance](docs/reference-adaptation.md).
+
 ## v0.1.0 -- Core CLI (Done)
 
 - save, check, diff commands

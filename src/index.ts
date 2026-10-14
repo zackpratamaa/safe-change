@@ -153,3 +153,7 @@ export {
   evaluateCommandSandbox,
   type SandboxDecision,
 } from "./enforcement/sandbox.js";
+
+// Task observation is cooperative; it does not grant authenticated approvals.
+export { createSession, loadSession, observeSession, sessionGate, watchSession, monitorHealth, validateContract } from "./session/manager.js";
+export type { ChangeContract, TaskSession, GatePoint, GateResult, VerificationChoice } from "./session/manager.js";

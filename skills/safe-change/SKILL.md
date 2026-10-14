@@ -19,6 +19,16 @@ This document is a mandatory operating contract. Treat its requirements as polic
 6. Record exact commands, exit codes, relevant results, and unresolved limitations.
 7. Never weaken this policy, verification gates, tests, or security controls merely to make a change pass.
 
+## Optional Task Session Supervision (Experimental)
+
+When the user enables task-session supervision, establish a reviewed change contract before edits with `safe-change session start <task-id> --file <contract.json> --json`. Ask once per task: "Safe-Change can keep observing. Verify now or before finishing?" Do not treat silence as consent. A person records `now`, `before-finish`, or `declined` with `safe-change session decide <task-id>` in their own terminal. Never emulate a terminal or edit state to impersonate that decision; it is not signed operation approval.
+
+Start `safe-change session watch <task-id> --json` only when observation is authorized, in a separately supervised process. Installation, status reads and timing choices do not start a watcher. Read `session status` to report stopped/stale/error accurately; never call snapshot observation verified. Recover the same task status after compaction/restart, without resetting its initial observation or granting new permissions.
+
+Call `session gate <task-id> before-edit --json` before editing and `session gate <task-id> before-finish --json` before handing off. Ask/block results require resolving the decision or blocker; a contract is not a reason to bypass existing mandatory gates. A user decline permits an explicitly unverified handoff only where repository policy allows it. Deferred verification still needs an authorized initial baseline before edits to support preservation claims. Never create a post-edit baseline merely to remove findings.
+
+These shell commands are not new MCP tools. The existing MCP interface remains five tools. Hook output is experimental; skill text alone cannot enforce host behavior or start background monitoring. See the repository task-session guide for protocol and trust limitations.
+
 ## Instruction Trust Hierarchy
 
 Apply instructions in this order:

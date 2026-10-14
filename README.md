@@ -23,6 +23,10 @@
 
 <br/>
 
+## Experimental task sessions (unreleased source)
+
+Task-scoped change contracts, interactive verification-timing choices, a separately started polling observer, and cooperative edit/finish gates are available in source. Observation is not verification, and installing a skill does not launch a watcher. The Claude-compatible hook adapter is protocol-tested, not live-IDE certified. See [task sessions](docs/task-sessions.md) and the [nine-repository reference ledger](docs/reference-adaptation.md).
+
 ## Why safe-change exists
 
 Autonomous AI coding agents are rewriting production codebases at unprecedented speed. When you delegate tasks to an AI agent, it touches dozens of files, mutates dependencies, and restructures critical architectural boundaries. The app might still compile and start, but subtle logic has been inverted, authorization guards removed, or regressions silently introduced — leaving developers guessing what broke and why.

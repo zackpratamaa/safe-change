@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "intent": "Add a bounded feature while preserving existing behavior",
+  "allowedPaths": ["src/", "tests/"],
+  "protectedPaths": ["tests/"],
+  "requirements": [
+    {
+      "id": "R1",
+      "description": "Existing behavior remains available",
+      "checks": ["test"]
+    }
+  ],
+  "nonGoals": ["No authentication, dependency, or deployment changes"]
+}
