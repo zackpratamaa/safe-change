@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- Align operational guides with strict verification, source/index coverage, branch fingerprints, actual replay/identity/attestation syntax, sandbox limits, and five MCP tools.
+- Mark seven research/design snapshots as historical; remove machine-specific links and unverified universal vendor configuration claims.
+- Add documentation-contract tests for CLI examples, local links, strict gates, replay category coverage, and canonical skill parity.
+
+
 ### Fixed
 - Bind persisted verification and evidence to Git-visible source, the full baseline, and environment digests; downgrade stale or legacy unbound reports.
 - Reinspect inputs after checks and reject verification/baseline creation when inputs mutate during execution.

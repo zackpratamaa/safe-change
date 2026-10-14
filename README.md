@@ -82,7 +82,7 @@ Previously passing check now fails: unit-tests
 safe-change records SHA-256 cryptographic hashes for codebase verification while respecting repository boundaries:
 
 - **Included:** All files tracked by Git (`git ls-files`) plus untracked working-tree files recognized by Git (`git status -uall`).
-- **Excluded:** Anything matched by `.gitignore` (e.g., `node_modules/`, `dist/`, build artifacts, cache folders) is completely ignored and never hashed. The `.safe-change/` directory is always excluded.
+- **Excluded:** Untracked ignored files are omitted; already tracked files remain included even if an ignore pattern matches them. The `.safe-change/` directory is always excluded.
 - **Binary files:** Read as raw binary streams and hashed directly with SHA-256 without distortion or character decoding.
 - **Symlinks:** Inspected with `lstat` and hashed by their link target string (`readlink`) without following or dereferencing paths outside the repository.
 
@@ -150,8 +150,8 @@ safe-change diff --stat
 | Command | What it does |
 |---|---|
 | `init` | Auto-detect test runners, create `.safe-change.json` (use `--update-gitignore` to update `.gitignore`) |
-| `save [description]` | Record a baseline — runs all checks, hashes all files |
-| `check` | Compare current state to baseline — exit 1 if regression |
+| `save [description]` | Run checks and record Git-visible inputs; reject input mutation |
+| `check [--strict]` | Compare with baseline; strict exits 0 only for verified status |
 | `diff [--stat]` | List files added, modified, deleted, and line change stats |
 | `assess` | Score change risk, enforce policy, and determine the minimum operating mode |
 | `lease acquire <session> <agent>` | Atomically acquire the repository write lease |
@@ -161,14 +161,14 @@ safe-change diff --stat
 | `fingerprint check` | Compare the current workspace against the baseline fingerprint |
 | `evidence <session>` | Create a source-free checksummed evidence bundle |
 | `audit verify` | Verify the tamper-evident session event chain |
-| `authorize <capability> <resource> <agent> <session> [approval]` | Evaluate an operation through the policy decision and enforcement contract |
+| `authorize <capability> <resource> <agent> <session> [approval]` | Evaluate policy; caller must enforce the decision |
 | `approval request` | Create a scoped, expiring approval request |
 | `approval grant` | Add one independent approval to a request |
 | `approval status` | Inspect request integrity, grants, and expiration |
 | `policy verify` | Verify the configured detached Ed25519 policy signature |
 | `semantic-diff [--base <ref>]` | AST semantic diff analysis for breaking changes and logic mutations |
-| `replay record <session> \| verify` | Record or deterministically replay execution sessions across environments |
-| `attest create <manifest> \| verify` | Create or cryptographically verify in-toto RFC 8785 Ed25519 attestations |
+| `replay record <session> \| verify <file>` | Record/verify metadata; --reexecute requests a detached-worktree rerun |
+| `attest create <session> \| verify <file>` | Sign/verify attestation with approved PEM key and required inputs |
 | `identity keygen \| register \| list` | Manage authorized Ed25519 approver keys in the trust registry |
 | `approval sign <req> \| verify` | Cryptographically sign or verify capability requests with Ed25519 |
 | `log` | Full history of baselines and check results |
@@ -251,7 +251,7 @@ Add this to your agent's MCP config:
 | Tool | Description |
 |---|---|
 | `safe_change_save` | Record a baseline before edits |
-| `safe_change_check` | Detect regressions after edits |
+| `safe_change_check` | Compare after edits; strict:true requires verified status |
 | `safe_change_diff` | Get file-level change summary |
 | `safe_change_status` | Show current baseline metadata |
 | `safe_change_log` | Retrieve project safety history |
@@ -309,8 +309,9 @@ Fully offline. Binds to `127.0.0.1` only — never exposed to the network.
 safe-change dashboard --port 8080
 ```
 
+Or set this property in `.safe-change.json`:
+
 ```json
-// Or set in .safe-change.json
 { "dashboardPort": 8080 }
 ```
 
@@ -338,6 +339,8 @@ If the configured port is already in use, the server exits with an error. Choose
 
 ## Verification integrity
 
+These changes describe current source. They are not automatically included in an older published npm package; check the approved release/commit.
+
 Use `safe-change check --strict --json` for a verified-only CI/agent gate. Plain
 `check` retains its no-new-regression exit contract and can exit 0 with a
 `failed` or `not-verified` status. MCP `safe_change_check` supports `strict: true`.
@@ -347,6 +350,8 @@ digests; input mutation during execution invalidates verification. Conventional
 test files and configured command scripts are protected from unnoticed changes.
 Add custom oracle paths using `protectedVerificationPaths`. Stale evidence is
 explicitly downgraded to `not-verified`, and semantic diff includes deletions.
+
+See [Documentation status](docs/documentation-status.md) for current versus historical references.
 
 See [Verification integrity and strict gates](docs/verification-integrity.md)
 for migration, conservative test-review behavior, and trust/coverage limits.
@@ -379,8 +384,8 @@ See [SECURITY.md](SECURITY.md) for trust boundaries and vulnerability reporting.
 
 | Code | Meaning |
 |---|---|
-| `0` | Clean — no new regressions |
-| `1` | Regression — at least one previously passing check now fails |
+| `0` | Plain check: no new regressions; strict check: verified status required |
+| `1` | New regression/blocking rule, strict non-verified result, or rejected mutating baseline |
 | `2` | No baseline found or baseline is corrupt |
 | `3` | Configuration error |
 | `4` | Not a Git repository |

@@ -1,5 +1,7 @@
 # Agent Compatibility Research (Milestone v0.1.1)
 
+> Historical research/design snapshot, not current operational instructions or live-runtime certification. For current behavior use [Verification integrity](verification-integrity.md), [MCP setup](mcp-setup.md), and the [runtime evidence matrix](runtime-verification.md). Earlier phase/test-count statements below describe that snapshot.
+
 This document records factual, evidence-evaluated research into the skill and configuration mechanisms for 10 supported AI coding agents:
 1. Antigravity (Google DeepMind)
 2. Claude Code (Anthropic)

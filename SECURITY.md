@@ -26,9 +26,9 @@ Until a private reporting channel exists, do not disclose exploit details, token
 ### Release pipeline security and provenance
 
 Production releases follow strict security controls:
-- **Build Provenance**: All release artifacts published to npm are signed with cryptographically verifiable OpenID Connect (OIDC) provenance attestations (`--provenance`) via Sigstore, linking each package release directly to its triggering GitHub commit and workflow execution.
+- **Build Provenance**: The approved tag publication pipeline requests OIDC-backed npm provenance (`--provenance`). Verify provenance for the exact artifact/version; source workflow configuration alone does not prove every historical publication has it.
 - **Credential Hygiene**: CI release runners access registry credentials solely via ephemeral secrets injected at publication time. Publication scripts actively sanitize diagnostic errors to prevent token disclosure.
-- **Workflow Permissions**: Release workflows enforce least privilege, granting only `contents: read` and `id-token: write`.
+- **Workflow Permissions**: Release workflow defaults use `contents: read` and `id-token: write`; the GitHub release publication job explicitly requires `contents: write`. Review job-level scopes, not only workflow defaults.
 - **Preflight Gate**: Release orchestrator scripts require automated preflight validation to verify version parity, package existence status, and release tag authenticity before granting build and publish permissions.
 
 ## Trust boundaries

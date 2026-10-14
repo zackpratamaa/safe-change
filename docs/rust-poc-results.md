@@ -1,5 +1,7 @@
 # Hasil Implementasi Rust Filesystem Layer (Milestone R.1 & R.2)
 
+> Historical research/design snapshot, not current operational instructions or live-runtime certification. For current behavior use [Verification integrity](verification-integrity.md), [MCP setup](mcp-setup.md), and the [runtime evidence matrix](runtime-verification.md). Earlier phase/test-count statements below describe that snapshot.
+
 Status: R.1 Approved, R.2 Production Layer Implemented (Environment-Limited Local Verification)  
 Tanggal: 2026-09-27  
 Lisensi: AGPL-3.0-only  

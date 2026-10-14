@@ -18,7 +18,7 @@ The assessment command:
 6. Requires baseline, test, coverage, and dependency-audit configuration when enabled by policy.
 7. Returns exit code 1 when approval is required.
 
-Assessment is not verification. Its JSON output always reports `verificationState: "not-verified"` because it does not execute the configured checks. Run `safe-change check --json` and repository-specific gates after the edit.
+Assessment is not verification. Its JSON output always reports `verificationState: "not-verified"` because it does not execute the configured checks. Run `safe-change check --strict --json` and repository-specific gates after the edit.
 
 ## Configuration
 
@@ -71,7 +71,7 @@ The initial detector blocks review when the current Git diff appears to:
 - replace an immutable action reference with a floating branch or major tag;
 - introduce a force-push command.
 
-This is a conservative textual detector. A flagged result requires human review; an unflagged result does not prove that the policy was preserved. AST-aware semantic diff and signed exceptions remain v0.4 roadmap items.
+This is a conservative textual detector. A flagged result requires human review; an unflagged result does not prove that the policy was preserved. AST semantic diff and signed approval grants exist as separate commands; assess does not automatically compose them. It cannot by itself intercept writes or approve a release.
 
 ## Evidence boundaries
 

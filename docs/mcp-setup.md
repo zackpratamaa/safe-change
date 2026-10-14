@@ -1,149 +1,65 @@
 # MCP Server Setup Guide
 
-safe-change exposes its core commands as MCP (Model Context Protocol) tools.
-Agents that support MCP can invoke `safe_change_save`, `safe_change_check`,
-`safe_change_diff`, and `safe_change_status` directly without manual skill
-installation.
+Safe-Change exposes five core tools through stdio MCP. Filesystem adapter tests,
+generic MCP protocol tests, and live per-agent sessions are separate evidence.
+All ten listed agents' live routes remain [pending evidence](runtime-verification.md).
 
-## Prerequisites
+## Server launch
 
-Install safe-change globally (version 0.1.2 or later):
-
-```bash
-npm install -g safe-change
-```
-
-Verify the installation:
+Install an approved release or build an approved source commit:
 
 ```bash
 safe-change --version
+safe-change mcp
 ```
 
-## Agent Configuration
-
-### Claude Code
-
-Add to `~/.claude/claude.json` or `.claude/claude.json` in the project root:
+For a source build, run Node with absolute `dist/cli.js` path and argument `mcp`.
+GUI clients may not inherit terminal PATH. The stdio launch fields are:
 
 ```json
-{
-  "mcpServers": {
-    "safe-change": {
-      "command": "safe-change",
-      "args": ["mcp"]
-    }
-  }
-}
+{"command":"safe-change","args":["mcp"]}
 ```
 
-### Cursor
+Some clients wrap these in mcpServers; others use UI, TOML, or another schema.
+Use the installed client's current official configuration mechanism. One JSON
+config path is not valid for every agent. Vendor configuration/discovery and
+auto-invocation are not certified by generic server tests. New strict/binding
+features on main are not automatically present in an older npm package.
 
-Add to `.cursor/mcp.json` in the project root:
+## Verify a connection
 
-```json
-{
-  "mcpServers": {
-    "safe-change": {
-      "command": "safe-change",
-      "args": ["mcp"]
-    }
-  }
-}
-```
+Reload/restart as the client requires, list tools, and explicitly call
+safe_change_status with the intended repository's absolute cwd. Success proves
+that session's tool connectivity, not auto-invocation or project verification.
 
-### Cline
+## Tool reference
 
-Add to VSCode `settings.json` under `cline.mcpServers`:
-
-```json
-{
-  "safe-change": {
-    "command": "safe-change",
-    "args": ["mcp"],
-    "disabled": false
-  }
-}
-```
-
-### Codex
-
-Add to `.codex/config.json` in the project root:
-
-```json
-{
-  "mcpServers": {
-    "safe-change": {
-      "command": "safe-change",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Gemini CLI
-
-Add to `~/.gemini/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "safe-change": {
-      "command": "safe-change",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Other Agents
-
-For Kimi Code, Amp, OpenCode, GitHub Copilot, and Antigravity, use the
-standard `mcpServers` format shown above. Adjust the config file location
-to match each agent's configuration path:
-
-| Agent | Config Location |
+| Tool | Contract |
 |---|---|
-| Kimi Code | `.kimi/mcp.json` or agent-specific config |
-| Amp | `.amp/config.json` or agent-specific config |
-| OpenCode | `.opencode/config.json` or agent-specific config |
-| GitHub Copilot | `.github/copilot/mcp.json` or agent-specific config |
-| Antigravity | `.agents/mcp_config.json` or agent-specific config |
+| safe_change_save | Run checks and record baseline; reject observed input mutation |
+| safe_change_check | Compare results; strict:true requires verified status |
+| safe_change_diff | File-level summary; use Git separately for line diffs |
+| safe_change_status | Baseline existence/time and check summary |
+| safe_change_log | Local safety history; optional last limit |
 
-## Verifying the Connection
+For final verification:
 
-After configuring the MCP server, restart the agent and type:
-
-```
-Please call safe_change_status to check if safe-change is connected.
+```json
+{"name":"safe_change_check","arguments":{"cwd":"/absolute/path/to/repository","strict":true}}
 ```
 
-If the agent returns baseline status information, the connection is working.
+Read verification.state and exitCode in returned JSON. Plain exit zero is no new
+regression, not necessarily verified. Strict non-verified exit one remains report
+data; MCP isError is not deployment approval. Infrastructure/configuration errors
+may be tool errors.
 
-## Tool Reference
-
-| Tool | Description |
-|---|---|
-| `safe_change_save` | Record a baseline snapshot of the repository state and run all configured verification checks. |
-| `safe_change_check` | Compare current state against the baseline. Exit code 1 means regression detected. |
-| `safe_change_diff` | Show file-level summary of changes (added, modified, deleted) relative to baseline. |
-| `safe_change_status` | Show current baseline status: existence, creation time, and last check summary. |
-
-## Combining with Skill Installation
-
-MCP and SKILL.md are not mutually exclusive. Using both provides maximum
-protection:
-
-- **SKILL.md** teaches the agent *when* to call safe-change (automatic
-  invocation at session boundaries, before risky edits, etc.).
-- **MCP** gives the agent *direct access* to safe-change tools without
-  shell PATH issues or manual command construction.
-
-To install the skill alongside MCP:
+## Skill plus MCP
 
 ```bash
 safe-change install <agent>
 ```
 
-Both mechanisms can coexist safely. The skill instructs the agent to use
-safe-change at the right moments, while MCP ensures the tools are always
-available regardless of shell configuration.
+Skill instructions tell an agent when to use tools; MCP supplies a callable route.
+Neither guarantees invocation or obedience. Review oracle changes before accepting
+another baseline. Mandatory approval needs external CI/permission boundaries.
+See [Verification integrity](verification-integrity.md).

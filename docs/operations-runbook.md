@@ -6,10 +6,10 @@ Run the following from the repository root:
 
 ```bash
 safe-change status --json
-safe-change check --json
+safe-change check --strict --json
 ```
 
-Confirm that the expected baseline exists, configured checks ran, no blocking rule failed, and no unexpected configuration drift is reported.
+Require verification.state verified and strict exit zero. Inspect protected oracle drift/input mutation as well as check failures, rules, and environment. Review oracle changes before explicitly accepting a new baseline; never rebaseline simply to silence a regression. Regenerate evidence after a fresh check.
 
 ## 2. Installation failure
 
