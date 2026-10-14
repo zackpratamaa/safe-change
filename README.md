@@ -522,3 +522,9 @@ Copyright © 2026 ZACK.PRATAMA — PT ZYNTRIX ARTIFICIAL INTELLIGENCE INDONESIA 
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=140&section=footer" />
 
 </div>
+
+## Experimental quality layer (unreleased source)
+
+`safe-change quality scan --json` runs narrow original code/UI heuristics, not a universal design/security audit. `quality profile` prints reviewed external-tool setup/check templates without installing or running them. `quality report sarif|playwright --file <repo-relative.json>` assesses report contents without authenticating their producer or freshness. `quality gate --file quality-policy.json` is a post-check delivery gate requiring current strict evidence for named checks.
+
+See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-repository audit](docs/quality-reference-audit.md), and [policy example](examples/quality/quality-policy.json). ORT/ScanCode/Cosign/Scorecard/CodeQL require project-specific policy integration; scanners and live browser checks are not automatically installed or certified. No source from restricted better-web-ui was copied.

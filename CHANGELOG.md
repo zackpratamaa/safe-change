@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomically replace verification summaries.
 
 ### Added
+- Experimental `quality` CLI: original limited AST/UI audit, current-evidence named-check delivery gate, strict SARIF/Playwright report-only assessment, and inert external-scanner profiles.
+- Pinned 13-repository license/installer audit and explicit setup-required compliance/provenance boundaries; no scanner installers, runtime dependencies or restricted source vendored.
 - Experimental `session` lifecycle: change contracts, expiring human timing choice, observer heartbeat, scope/oracle gates, and binding to existing verification evidence.
 - Interactive-only timing-choice command; no agent-facing MCP consent setter. This is cooperative workflow state, not authenticated human approval.
 - Claude-compatible hook output adapter with explicit protocol-only validation limits; no automatic hook installation.

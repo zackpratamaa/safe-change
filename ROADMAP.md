@@ -14,6 +14,12 @@ Status labels: Done | In Progress | Planned
 - Planned: authenticated native consent UI, automatic reviewed per-host integration, watcher supervision, specialized code/security/license quality modules, UI/UX contract evaluation, performance/cost budgets and Meta integration.
 - [Usage and boundaries](docs/task-sessions.md); [reference provenance](docs/reference-adaptation.md).
 
+## Quality increment (Unreleased, partial)
+
+- Implemented: limited original AST/UI heuristics; current-evidence required-check gate; conservative SARIF and Playwright report-only assessment; inert scanner templates and setup-required profiles.
+- Not completed: specialized cross-language maintainability analysis, full UI/UX contract parser, live browser/axe certification, installed/live-tested external scanners, project-specific ORT/ScanCode license policy, Cosign identity/attestation policy and Scorecard/CodeQL findings policy.
+- No automatic IDE or CI activation. [Usage and boundaries](docs/quality-gates.md); [pinned audit](docs/quality-reference-audit.md).
+
 ## v0.1.0 -- Core CLI (Done)
 
 - save, check, diff commands

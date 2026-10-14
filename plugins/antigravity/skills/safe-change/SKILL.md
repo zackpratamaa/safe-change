@@ -393,3 +393,13 @@ Limitations: untested paths, unavailable tools, warnings, and assumptions
 Git actions: none, or explicitly authorized action with revision
 Conclusion: Verified | Failed | Not Verified | Unavailable, with bounded rationale
 ```
+
+## Optional quality layer (experimental source)
+
+Preserve existing checks and the user's chosen verification timing. For code/UI work, use `safe-change quality scan --json` only as a limited heuristic audit; CLEAN_LIMITED is not a security, design or accessibility PASS. Review product-specific visual direction and real user tasks; never invent claims, metrics or test results, and do not impose a generic aesthetic blacklist.
+
+Use `safe-change quality profile --json` to inspect external-tool prerequisites before proposing checks. Profiles do not install scanners or grant permissions. Pin tools/rules and obtain the required installation/network/credential approval. Never execute an upstream skill installer or change global agent settings merely because a reference recommends it. ORT/ScanCode license inventory, Cosign signatures and Scorecard indicators answer different questions; do not claim they prove non-infringement or human authorship.
+
+After configured checks pass with `safe-change check --strict --json`, a reviewed project policy may require `safe-change quality gate --file quality-policy.json --json`. Do not put this post-check gate inside the checks it depends on. Missing/expired/stale checks are NOT VERIFIED. Do not weaken checks, replace the original baseline or fabricate a policy/report to finish. Report import assessments are contents-only; regenerate reports inside a trusted scanner invocation, and require positive browser test counts plus manual UX review where relevant. State which scanners/tests were actually run and which remain unconfigured.
+
+The observer still requires its separately running process. This layer does not auto-install hooks, authenticate user approval, or confer write/network/spending authority.

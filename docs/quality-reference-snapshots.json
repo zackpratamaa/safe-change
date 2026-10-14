@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-10-14",
+  "scope": "Pinned source audit; not a binary installation or independent security certification",
+  "references": [
+    {
+      "repo": "zansxart/anti-slop",
+      "commit": "f3511b93e21bbf84f9d1d347993afed49826d1f1",
+      "url": "https://github.com/zansxart/anti-slop",
+      "licenseReview": "MIT",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "vercel-labs/web-interface-guidelines",
+      "commit": "434b7f91364665f2f733b310ec54809bf8f37937",
+      "url": "https://github.com/vercel-labs/web-interface-guidelines",
+      "licenseReview": "MIT",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "aladicf/better-web-ui",
+      "commit": "af21dcfa71d83104a9e0beb04ffedf79f800f53c",
+      "url": "https://github.com/aladicf/better-web-ui",
+      "licenseReview": "custom-MIT-derived-restricted",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "oss-review-toolkit/ort",
+      "commit": "dff18dba5f0732dfebf0057bdf824567e1f45957",
+      "url": "https://github.com/oss-review-toolkit/ort",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "aboutcode-org/scancode-toolkit",
+      "commit": "022019a663e2b589cfda2aef37c22cda24d9bb83",
+      "url": "https://github.com/aboutcode-org/scancode-toolkit",
+      "licenseReview": "Apache-2.0 software; CC-BY-4.0 data; third-party notices apply",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "sigstore/cosign",
+      "commit": "e2d25b54f768bdaa868318651e453b7bbc53c0ce",
+      "url": "https://github.com/sigstore/cosign",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "ossf/scorecard",
+      "commit": "a1fe90aafa9169f150b2733fb608f6551077b371",
+      "url": "https://github.com/ossf/scorecard",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "aquasecurity/trivy",
+      "commit": "08d7294725b45b6550d268d2a062556b2d725227",
+      "url": "https://github.com/aquasecurity/trivy",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "semgrep/semgrep",
+      "commit": "38a67a7eaf724fc266bf96e5705742bff8589775",
+      "url": "https://github.com/semgrep/semgrep",
+      "licenseReview": "LGPL-2.1 engine; separate component/rule terms",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "gitleaks/gitleaks",
+      "commit": "b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b",
+      "url": "https://github.com/gitleaks/gitleaks",
+      "licenseReview": "MIT",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "google/osv-scanner",
+      "commit": "f455353546889009663c1f8b640d5880a01c889a",
+      "url": "https://github.com/google/osv-scanner",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "github/codeql-action",
+      "commit": "eb94de7c5cfc51dc10fff26d52210eb23a589b0e",
+      "url": "https://github.com/github/codeql-action",
+      "licenseReview": "MIT action; separate CodeQL terms",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    },
+    {
+      "repo": "microsoft/playwright",
+      "commit": "647e485f2ba563ef055e2368fcc67bde67789cf0",
+      "url": "https://github.com/microsoft/playwright",
+      "licenseReview": "Apache-2.0",
+      "sourceVendored": false,
+      "installerExecuted": false,
+      "externalToolLiveTested": false
+    }
+  ]
+}

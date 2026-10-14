@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { OutputFormat } from "./types/index.js";
 import { ExitCodes } from "./types/index.js";
 import type { InstallerScope } from "./installer/core/path-safety.js";
+import { runQuality } from "./commands/quality.js";
 import { runSession } from "./commands/session.js";
 import { runInit } from "./commands/init.js";
 import { runSave } from "./commands/save.js";
@@ -278,6 +279,7 @@ Usage:
   safe-change save [description]   Record a baseline of the repository and verification results.
   safe-change check                Compare current state against the baseline.
   safe-change diff [options]       Show a summary of changes since the baseline.
+  safe-change quality <action>     Limited static audit, external-tool profiles, or current-evidence gate.
   safe-change session <action>     Task contract, human choice, observation, watch, and workflow gates.
   safe-change assess               Score risk, enforce change budget, and detect policy downgrades.
   safe-change lease <action>       Acquire, inspect, or release the repository write lease.
@@ -402,6 +404,11 @@ async function main(): Promise<void> {
 
     case "diff": {
       exitCode = await runDiff({ format, stat: parsed.flags.stat });
+      break;
+    }
+
+    case "quality": {
+      exitCode = await runQuality({ values: parsed.positional, file: parsed.options.file, format });
       break;
     }
 
