@@ -8,6 +8,7 @@ export interface CheckDefinition {
 export interface SafeChangeConfig {
   readonly version: number;
   readonly checks: readonly CheckDefinition[];
+  readonly protectedVerificationPaths?: readonly string[];
   readonly logRetention?: number;
   readonly dashboardPort?: number;
   readonly enterprisePolicy?: EnterprisePolicy;
@@ -366,6 +367,7 @@ export interface EvidenceManifest {
   readonly baselineId: string;
   readonly workspaceFingerprint: string;
   readonly verificationState: VerificationState;
+  readonly verificationFreshness?: "fresh" | "stale" | "missing";
   readonly files: readonly string[];
   readonly evidenceDigest: string;
 }
@@ -440,7 +442,17 @@ export interface VerificationInfo {
   readonly activeRulesCount: number;
 }
 
+export interface VerificationBinding {
+  readonly schemaVersion: 1;
+  readonly sourceDigest: string;
+  readonly baselineDigest: string;
+  readonly environmentDigest: string;
+}
+
 export interface CheckReport {
+  readonly verificationBinding?: VerificationBinding;
+  readonly verificationInputDrift?: readonly string[];
+  readonly inputMutationDetected?: boolean;
   readonly schemaVersion: 2;
   readonly generatedAt: string;
   readonly baseline: {

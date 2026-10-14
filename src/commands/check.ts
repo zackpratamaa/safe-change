@@ -17,10 +17,12 @@ import {
   captureWorkspaceFingerprint,
   compareWorkspaceFingerprints,
 } from "../integrity/fingerprint.js";
+import { captureVerificationBinding, bindingsMatch, changedVerificationInputs } from "../integrity/verification-binding.js";
 import { persistVerificationSummary } from "../integrity/evidence.js";
 
 export interface CheckOptions {
   readonly format: OutputFormat;
+  readonly strict?: boolean;
   readonly trigger?: "manual" | "mcp" | "cli";
 }
 
@@ -94,6 +96,14 @@ export async function runCheck(options: CheckOptions): Promise<number> {
     return ExitCodes.INTERNAL_ERROR;
   }
 
+  let beforeBinding;
+  try {
+    beforeBinding = await captureVerificationBinding(repoRoot, config, baseline, currentFiles);
+  } catch (error: unknown) {
+    process.stderr.write(renderError(format, `Verification binding failed: ${String(error)}`, ExitCodes.INTERNAL_ERROR));
+    return ExitCodes.INTERNAL_ERROR;
+  }
+
   // 5. Execute current checks
   let currentResults;
   try {
@@ -116,7 +126,22 @@ export async function runCheck(options: CheckOptions): Promise<number> {
     return ExitCodes.INTERNAL_ERROR;
   }
 
-  // 6. Build and render report
+  // Read the final state as well: checks are allowed to execute, not to silently
+  // replace the inputs on which their verification result depends.
+  let afterBinding;
+  try {
+    currentFiles = await getFileEntries(repoRoot);
+    const currentBaseline = await loadBaseline(repoRoot);
+    if (!currentBaseline) throw new Error("Baseline disappeared during verification.");
+    afterBinding = await captureVerificationBinding(repoRoot, config, currentBaseline, currentFiles);
+  } catch (error: unknown) {
+    process.stderr.write(renderError(format, `Post-check inspection failed: ${String(error)}`, ExitCodes.INTERNAL_ERROR));
+    return ExitCodes.INTERNAL_ERROR;
+  }
+  const inputMutationDetected = !bindingsMatch(beforeBinding, afterBinding);
+  const verificationInputDrift = changedVerificationInputs(repoRoot, baseline, currentFiles, config);
+
+  // 6. Build and render report using the final file snapshot.
   let report = buildReport(baseline, currentResults, currentFiles, config);
 
   // Check branch mismatch
@@ -229,6 +254,12 @@ export async function runCheck(options: CheckOptions): Promise<number> {
     verificationState = "failed";
     verificationReason =
       "Pre-existing check failure remains unresolved from baseline";
+  } else if (inputMutationDetected) {
+    verificationState = "not-verified";
+    verificationReason = "Verification inputs changed during check execution; rerun on stable inputs";
+  } else if (verificationInputDrift.length > 0) {
+    verificationState = "not-verified";
+    verificationReason = "Protected verification inputs changed since baseline; review and explicitly save an accepted baseline";
   } else if (configuredChecksCount === 0 && activeRulesCount === 0) {
     verificationState = "not-verified";
     verificationReason =
@@ -261,6 +292,10 @@ export async function runCheck(options: CheckOptions): Promise<number> {
   report = {
     ...report,
     rulesState,
+    verificationBinding: afterBinding,
+    verificationInputDrift,
+    inputMutationDetected,
+    exitCode: options.strict && verificationState !== "verified" ? ExitCodes.NEW_FAILURE : report.exitCode,
     verification: {
       state: verificationState,
       reason: verificationReason,

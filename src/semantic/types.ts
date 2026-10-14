@@ -7,6 +7,7 @@ export type SemanticLanguage =
   | "jsonc";
 
 export type SemanticCategory =
+  | "source-file-deleted"
   | "negation-inversion"
   | "comparison-change"
   | "logical-operator-change"

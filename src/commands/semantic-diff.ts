@@ -42,15 +42,14 @@ async function getGitModifiedFiles(
   try {
     const { stdout } = await execFileAsync(
       "git",
-      ["diff", "--name-only", "--diff-filter=ACMR", baseCommit],
+      ["diff", "--name-only", "-z", "--diff-filter=ACMRD", baseCommit],
       { cwd: repoRoot }
     );
     return stdout
-      .split(/\r?\n/)
-      .map((s) => s.trim())
+      .split("\0")
       .filter((s) => s.length > 0);
-  } catch {
-    return [];
+  } catch (error: unknown) {
+    throw new Error(`Semantic diff Git inspection failed: ${String(error)}`);
   }
 }
 
@@ -62,6 +61,8 @@ export async function runSemanticDiff(
 
   const engine = new SemanticDiffEngine();
   const baseCommit = options.baseCommit ?? "HEAD";
+  // Do not turn an invalid comparison base into an empty successful report.
+  await execFileAsync("git", ["rev-parse", "--verify", `${baseCommit}^{commit}`], { cwd: repoRoot });
 
   let targetFiles: string[] = [];
   if (options.file) {
@@ -84,13 +85,17 @@ export async function runSemanticDiff(
 
   for (const relFile of targetFiles) {
     if (!engine.getAdapter(relFile)) continue;
-    const beforeContent =
-      (await getGitFileContent(repoRoot, baseCommit, relFile)) ?? "";
+    const originalContent = await getGitFileContent(repoRoot, baseCommit, relFile);
+    const beforeContent = originalContent ?? "";
     let afterContent = "";
     try {
       afterContent = await readFile(resolve(repoRoot, relFile), "utf-8");
-    } catch {
-      continue;
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT" || originalContent === null) {
+        throw new Error(`Unable to inspect semantic input "${relFile}": ${String(error)}`);
+      }
+      // Missing tracked source is a deletion, not an omitted input.
+      afterContent = "";
     }
     fileInputs.push({
       filePath: relFile,

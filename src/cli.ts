@@ -56,6 +56,7 @@ interface ParsedArgs {
     dryRun: boolean;
     nonInteractive: boolean;
     stat: boolean;
+    strict: boolean;
     updateGitignore: boolean;
   };
   logOptions: {
@@ -94,6 +95,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       dryRun: false,
       nonInteractive: false,
       stat: false,
+      strict: false,
       updateGitignore: false,
     },
     logOptions: {},
@@ -208,7 +210,10 @@ function parseArgs(argv: string[]): ParsedArgs {
       }
     } else if (arg === "--no-open") {
       result.dashboardOptions.noOpen = true;
-    } else if (arg === "--reexecute" || arg === "--strict") {
+    } else if (arg === "--strict") {
+      result.flags.strict = true;
+      result.options.reexecute = true; // Backward-compatible replay alias.
+    } else if (arg === "--reexecute") {
       result.options.reexecute = true;
     } else if (arg === "--fail-on") {
       const value = args[++i];
@@ -322,6 +327,7 @@ Options:
   --update-gitignore        Add .safe-change/ to .gitignore during init (disabled by default).
   --dry-run                 Preview without writing to disk.
   --non-interactive, -y     Run without interactive confirmation prompts.
+  --strict                  For check, require verified status (exit 1 otherwise).
   --json                    Output in JSON format.
   --help, -h                Show this help message.
   --version, -v             Show version.
@@ -388,7 +394,7 @@ async function main(): Promise<void> {
     }
 
     case "check": {
-      exitCode = await runCheck({ format });
+      exitCode = await runCheck({ format, strict: parsed.flags.strict });
       break;
     }
 

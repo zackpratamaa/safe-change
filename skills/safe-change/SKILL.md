@@ -183,7 +183,7 @@ Run check after edits are complete.
 Run:
 
 ```bash
-safe-change check --json
+safe-change check --strict --json
 ```
 
 Then run repository-specific gates appropriate to the selected mode. Do not omit a relevant gate because it is slow without explicitly reporting the omission and impact.
@@ -232,6 +232,15 @@ Records a file-hash baseline and configured check results.
 - Exit `3`: configuration error.
 - Exit `4`: not a Git repository.
 - Exit `5`: internal error.
+
+### Verification integrity gate
+
+Use `check --strict --json` for final approval. If protected test/oracle inputs
+changed, stop and request review; do not automatically save a replacement
+baseline. Put non-conventional contract/fixture paths in
+`protectedVerificationPaths`. If source, baseline, rules, or environment changed
+after checking, rerun before creating evidence; stale reports are not verified.
+Local checks do not impose an OS boundary on an unrestricted agent.
 
 ### `safe-change check`
 

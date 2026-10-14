@@ -336,6 +336,22 @@ If the configured port is already in use, the server exits with an error. Choose
 
 <br/>
 
+## Verification integrity
+
+Use `safe-change check --strict --json` for a verified-only CI/agent gate. Plain
+`check` retains its no-new-regression exit contract and can exit 0 with a
+`failed` or `not-verified` status. MCP `safe_change_check` supports `strict: true`.
+
+Checks now bind their reports to Git-visible source, baseline, and environment
+digests; input mutation during execution invalidates verification. Conventional
+test files and configured command scripts are protected from unnoticed changes.
+Add custom oracle paths using `protectedVerificationPaths`. Stale evidence is
+explicitly downgraded to `not-verified`, and semantic diff includes deletions.
+
+See [Verification integrity and strict gates](docs/verification-integrity.md)
+for migration, conservative test-review behavior, and trust/coverage limits.
+These controls do not make unrestricted same-user agent execution tamper-proof.
+
 ## Safety model
 
 safe-change is built to never be the cause of a regression.

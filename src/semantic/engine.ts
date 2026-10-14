@@ -56,7 +56,22 @@ export class SemanticDiffEngine {
       };
     }
 
-    const rawFindings = adapter.compare(filePath, beforeContent, afterContent);
+    const rawFindings: readonly SemanticFinding[] = beforeContent.trim() && !afterContent.trim()
+      ? [{
+        findingId: sha256(`${filePath}:source-file-deleted:${beforeHash}`).slice(0, 16),
+        file: filePath,
+        language: adapter.getLanguage(filePath),
+        nodeType: "SourceFile",
+        rangeBefore: null,
+        rangeAfter: null,
+        category: "source-file-deleted",
+        severity: "critical",
+        beforeRepresentation: "Non-empty supported source file",
+        afterRepresentation: "Deleted or emptied source file",
+        confidence: "high",
+        explanation: "Supported source was removed or emptied; explicit review is required.",
+      }]
+      : adapter.compare(filePath, beforeContent, afterContent);
 
     // Deterministic sorting of findings
     const sortedFindings = [...rawFindings].sort((a, b) => {

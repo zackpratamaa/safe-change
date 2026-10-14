@@ -12,6 +12,7 @@ export type {
   FileChanges,
   CheckReportSummary,
   CheckReport,
+  VerificationBinding,
   DiffSummary,
   ExitCode,
   OutputFormat,

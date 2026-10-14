@@ -13,6 +13,8 @@ import {
 import { executeAllChecks } from "../runner/executor.js";
 import { renderSaveResult, renderError } from "../output/renderer.js";
 import { appendEntry, createLogEntry } from "../log/log-manager.js";
+import { captureWorkspaceFingerprint } from "../integrity/fingerprint.js";
+import { sourceDigest } from "../integrity/verification-binding.js";
 import { loadRulesResult } from "../rules/manager.js";
 
 export interface SaveOptions {
@@ -103,6 +105,15 @@ export async function runSave(options: SaveOptions): Promise<number> {
     return ExitCodes.INTERNAL_ERROR;
   }
 
+  let beforeFingerprint;
+  try {
+    beforeFingerprint = await captureWorkspaceFingerprint(repoRoot, config);
+  } catch (error: unknown) {
+    process.stderr.write(renderError(format, `Baseline fingerprint failed: ${String(error)}`, ExitCodes.INTERNAL_ERROR));
+    return ExitCodes.INTERNAL_ERROR;
+  }
+  const beforeSourceDigest = sourceDigest(files);
+
   // 4. Execute verification checks
   let checkResults;
   try {
@@ -122,6 +133,18 @@ export async function runSave(options: SaveOptions): Promise<number> {
         ExitCodes.INTERNAL_ERROR
       )
     );
+    return ExitCodes.INTERNAL_ERROR;
+  }
+
+  try {
+    const finalFiles = await getFileEntries(repoRoot);
+    const finalFingerprint = await captureWorkspaceFingerprint(repoRoot, config);
+    if (beforeSourceDigest !== sourceDigest(finalFiles) || beforeFingerprint.digest !== finalFingerprint.digest) {
+      process.stderr.write(renderError(format, "Verification inputs changed during baseline checks; baseline was not saved.", ExitCodes.NEW_FAILURE));
+      return ExitCodes.NEW_FAILURE;
+    }
+  } catch (error: unknown) {
+    process.stderr.write(renderError(format, `Post-baseline inspection failed: ${String(error)}`, ExitCodes.INTERNAL_ERROR));
     return ExitCodes.INTERNAL_ERROR;
   }
 

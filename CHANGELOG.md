@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Bind persisted verification and evidence to Git-visible source, the full baseline, and environment digests; downgrade stale or legacy unbound reports.
+- Reinspect inputs after checks and reject verification/baseline creation when inputs mutate during execution.
+- Guard conventional test paths and repository-local command scripts from unreviewed drift; support custom `protectedVerificationPaths` globs.
+- Include deleted source in semantic diff and emit critical deletion findings; reject invalid comparison bases.
+- Atomically replace verification summaries.
+
+### Added
+- `check --strict` and MCP `safe_change_check` `strict: true` for a verified-only gate, while preserving legacy plain-check exit behavior and replay's strict alias.
+- Regression coverage for stale evidence, source mutation, oracle weakening, configuration removal, fail-fail gate behavior, and deletion.
+- Explicit verification-integrity documentation covering migration and cooperative trust boundaries.
+
 ## [1.0.0] - 2026-09-29
 
 ### Added

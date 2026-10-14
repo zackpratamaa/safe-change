@@ -97,6 +97,18 @@ function validateConfig(data: unknown): SafeChangeConfig {
     checks.push(check);
   }
 
+  let protectedVerificationPaths: string[] | undefined;
+  if (obj["protectedVerificationPaths"] !== undefined) {
+    const paths = obj["protectedVerificationPaths"];
+    if (!Array.isArray(paths) || paths.some(path =>
+      typeof path !== "string" || !path.trim() || path.startsWith("/") ||
+      path.includes("\\") || path.split("/").includes("..") || /^[A-Za-z]:/.test(path)
+    )) {
+      throw new ConfigError("protectedVerificationPaths must be repository-relative glob strings without parent traversal.");
+    }
+    protectedVerificationPaths = paths as string[];
+  }
+
   let logRetention: number | undefined;
   if (obj["logRetention"] !== undefined) {
     if (
@@ -153,6 +165,7 @@ function validateConfig(data: unknown): SafeChangeConfig {
   return {
     version: 1,
     checks,
+    ...(protectedVerificationPaths ? { protectedVerificationPaths } : {}),
     ...(logRetention !== undefined ? { logRetention } : {}),
     ...(dashboardPort !== undefined ? { dashboardPort } : {}),
     ...(obj["enterprisePolicy"] !== undefined
