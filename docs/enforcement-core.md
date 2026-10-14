@@ -49,7 +49,7 @@ Configured checks can be restricted by:
 - mandatory process-tree timeout termination;
 - secret redaction before retention.
 
-`networkPolicy: "deny"` fails closed because the current portable runtime does not provide mandatory operating-system network isolation. It never claims that proxy variables or application cooperation equal network denial.
+`networkPolicy: "deny"` requires usable Linux bwrap. macOS/POSIX fallback and native Windows cannot enforce it and block the request. Proxy variables or application cooperation do not provide mandatory network denial. Environment inheritance is enabled by default unless explicitly disabled.
 
 ## Approval workflow
 
@@ -85,7 +85,7 @@ safe-change authorize \
 
 Requests bind capability, resource, requester, session, reason, and expiration. Grant chains bind each approval to the previous grant and request digest. The requester cannot self-approve when policy prohibits it.
 
-Approver identity is currently a local identifier, not a cryptographically authenticated enterprise identity. Identity-provider integration and signed approval grants remain future work.
+Legacy `approval grant` uses local identifiers, not authenticated enterprise identity. Ed25519 registry-backed `approval sign`/`verify` exist as a separate route; signed grants do not establish external identity-provider integration.
 
 ## Signed policy root
 
@@ -111,8 +111,8 @@ When `requireSignedPolicy` is true, missing, malformed, stale, or invalid signat
 
 ## Current boundaries
 
-- The authorization command is a machine-enforced contract for Safe-Change-aware clients; universal interception of arbitrary operating-system operations remains future work.
-- Approver identity is backed by local identifiers or cryptographically signed Ed25519 identity assertions (see [Verifiable Execution Guide](file:///c:/Users/zakim/OneDrive/Desktop/safe-change/docs/verifiable-execution.md)).
-- Network denial and process isolation are handled via the OS Sandbox Provider layer (see [Verifiable Execution Architecture](file:///c:/Users/zakim/OneDrive/Desktop/safe-change/docs/verifiable-execution-architecture.md)).
+- The authorization command evaluates a decision and writes an audit event; it does not execute/intercept the requested operation. The caller must enforce the result. Required approval needs an external mandatory boundary.
+- Approver identity is backed by local identifiers or cryptographically signed Ed25519 identity assertions (see [Verifiable Execution Guide](verifiable-execution.md)).
+- Network denial and process isolation are handled via the OS Sandbox Provider layer (see [Verifiable Execution Architecture](verifiable-execution-architecture.md)).
 - Exceptions cannot override explicit capability denial.
-- Publishing, tagging, and release creation remain separately approval-gated operations.
+- Publishing, tagging, and release creation require separately configured and enforced approvals; calling check alone does not gate them.

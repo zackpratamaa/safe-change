@@ -226,9 +226,8 @@ Exit codes are command-specific and must be interpreted together with the struct
 Records a file-hash baseline and configured check results.
 
 - `--json`: structured baseline and check evidence.
-- `--verbose`: detailed diagnostics.
 - Exit `0`: baseline created.
-- Exit `2`: state write failure.
+- Exit `1`: inputs changed during baseline checks; baseline was not saved.
 - Exit `3`: configuration error.
 - Exit `4`: not a Git repository.
 - Exit `5`: internal error.
@@ -247,9 +246,9 @@ Local checks do not impose an OS boundary on an unrestricted agent.
 Compares current files and check results with the baseline.
 
 - `--json`: structured comparison and summary.
-- `--verbose`: captured diagnostic tails for failures.
 - Exit `0`: no new regression. This does not mean every check currently passes.
-- Exit `1`: new regression.
+- `--strict`: exit 0 only when verification.state is verified.
+- Exit `1`: new regression/blocking rule, or non-verified status in strict mode.
 - Exit `2`: baseline missing or corrupt.
 - Exit `3`: configuration error.
 - Exit `4`: not a Git repository.
@@ -261,7 +260,7 @@ Reports added, modified, deleted, and unchanged file counts relative to the base
 
 - `--json`: structured file lists and `lineDiffAvailable: false`.
 - Exit `0`: summary computed.
-- Exit `2`: baseline missing.
+- Without a baseline, reports Git-visible state with an explicit note; this is not baseline verification.
 - Exit `4`: not a Git repository.
 
 ## Verification State Matrix
@@ -270,7 +269,7 @@ Every conclusion must use one of these states:
 
 | State | Required meaning | Examples |
 |---|---|---|
-| **Verified** | Current evidence shows the configured check passes and the relevant definition is unchanged. | `pass-pass`, `fail-pass` |
+| **Verified** | Current bound evidence shows passing checks, stable inputs, unchanged protected oracle/definitions, and comparable environment. | `pass-pass`, `fail-pass` |
 | **Failed** | A new regression exists or a current failure remains unresolved. | `pass-fail`, `pass-timeout`, `fail-fail`, `fail-timeout`, `timeout-fail`, `timeout-timeout` |
 | **Not Verified** | No applicable check ran, no checks exist, definitions drifted, evidence is stale, or execution was incomplete. | `unverified`, `definition-changed`, skipped, cancelled |
 | **Unavailable** | The required executable or environment cannot run. | command missing, spawn failure |

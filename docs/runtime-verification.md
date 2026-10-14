@@ -87,7 +87,7 @@ The expected successful tool call records the baseline and returns the execution
 
 ## Tier 2: Agent Skill Instructions (`SKILL.md`)
 
-For agents using file-based skills:
+For agents using file-based skills, the following are manual test examples, not certified vendor configuration paths. Confirm current client support before using them:
 
 ### Claude Code Verification
 - Skill location: `.claude/skills/safe-change/SKILL.md`
@@ -95,15 +95,15 @@ For agents using file-based skills:
 ```markdown
 ## Safety Workflow
 Before editing critical files, run `safe-change save "<description>"`.
-After editing, run `safe-change check` to verify no regressions occurred.
+After editing, run `safe-change check --strict` to verify no regressions occurred.
 ```
-- Reload skills in session: `/reload-skills`
+- Reload/restart using the installed client's supported mechanism; do not assume a particular slash command exists.
 
 ### Cursor Verification
 - Skill location: `.cursor/skills/safe-change/SKILL.md`
 - Add to `.cursorrules`:
 ```markdown
-Always invoke `safe-change save` before executing multi-file refactors and `safe-change check` afterwards.
+Always invoke `safe-change save` before executing multi-file refactors and `safe-change check --strict` afterwards.
 ```
 
 ## Summary

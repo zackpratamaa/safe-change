@@ -1,135 +1,72 @@
-# Verifiable Execution Architecture & Threat Model
+# Verifiable Execution Architecture and Threat Model
 
-This document defines the architectural specification, threat model, trust boundaries, cryptographic invariants, and failure semantics for Safe-Change Ultra Enterprise (v0.4 Verifiable Execution).
+This describes implemented components, not an automatically composed universal
+security pipeline. Executable syntax: [Verifiable Execution Guide](verifiable-execution.md).
 
-## 1. System Overview and Goals
+## Components and boundaries
 
-Safe-Change v0.4 establishes a verifiable-execution security layer for AI-assisted and automated software engineering workflows. The architecture binds code modifications, policy decisions, sandbox constraints, execution traces, semantic changes, and multi-party approvals into a tamper-evident, cryptographically verifiable provenance chain.
+| Component | Actual boundary |
+|---|---|
+| Baseline/check | Configured check comparison; strict requires verified state |
+| Verification binding | Git-visible source/index, full baseline, environment digest; pre/post mutation detection |
+| Oracle guard | Conservative drift guard for tests, runner manifests/configs, CI, custom paths |
+| Semantic diff | TS/JS/JSON heuristics, including deletion; not full correctness proof |
+| Authorization | Policy decision, approvals, scope, expiry, audit; caller must enforce it |
+| Write lease | Cooperative session ownership, not mandatory OS filesystem locking |
+| Sandbox | Direct spawn, timeout/output/redaction; optional Linux isolation and portable limitations |
+| Replay | Metadata verification by default; detached-worktree rerun only when requested |
+| Attestation | Ed25519 DSSE/in-toto signing; trust/fresh behavioral checks are separate |
+| Identity | Local key registry and optional signed grants; legacy identifiers are distinct |
 
-The five primary security subsystems are:
-1. **AST Semantic Diff Engine**: Syntactic and semantic structural analysis comparing code states across AST representations to detect security-sensitive code mutations (negation inversions, guard removals, error swallowing, test weakening, assertion stripping).
-2. **Deterministic Replay Subsystem**: Isolated, environment-controlled reproduction of verification sessions with strict drift classification across 13 distinct drift categories.
-3. **Cryptographic Attestation Framework**: DSSE/in-toto-compatible Ed25519 signing of canonicalized verification manifests binding repository state, policies, logs, diffs, and evidence.
-4. **OS-Backed Command Sandbox**: Real operating-system process isolation, capability detection, environment sterilization, process-tree termination, and fail-closed enforcement when mandatory isolation guarantees cannot be proven.
-5. **Signed Approval Identity Registry**: Cryptographically signed Ed25519 approval grants with tamper-evident chain linking, distinct multi-party thresholds, key rotation, and revocation tracking.
+## Trust and limitations
 
----
+Repository text, agent suggestions, dependencies, and output are untrusted data.
+Configuration and commands need operator review: they execute with user privileges.
+Safe-Change assumes single-user/cooperative execution. Hostile same-account actors
+can bypass local tools, replace state, or mutate and restore inputs between
+observations. Stronger isolation requires external protected CI/OS/container
+boundaries and controlled baseline acceptance.
 
-## 2. Trust Boundaries & Actor Model
+Checks cover configured behavior, not every old feature. Protected conventional
+oracle paths do not discover all indirect/external inputs; configure custom paths.
+Bindings cover Git-visible files plus fingerprint inputs, not ignored outputs,
+external services, arbitrary environment values, or installed dependency contents.
+Evidence is point-in-time. Local digest chains can be rebuilt without external
+anchors. Semantic findings are heuristics. Process termination/path checks are
+not absolute confinement of hostile privileged processes.
 
-```
-+-----------------------------------------------------------------------------------+
-| UNTRUSTED REALM                                                                   |
-| - AI Agents / LLMs (Claude Code, Cursor, Antigravity, Copilot, etc.)              |
-| - Pull Request text, Commit messages, Issues, README files, Source comments       |
-| - Dependency code, third-party packages, external environment variables           |
-| - Terminal input, shell configuration, test fixture contents                      |
-+-----------------------------------------------------------------------------------+
-                                      |
-                                      | Capability Request / Proposed Change
-                                      v
-+-----------------------------------------------------------------------------------+
-| POLICY ENFORCEMENT POINT (PEP) & SIGNED TRUST LAYER                              |
-| - Ed25519 Policy Signature Verification (fails closed on untrusted policy)         |
-| - Signed Approval Identity Registry (Ed25519 public keys, roles, revocation)      |
-| - Write Lease Controller (single-agent concurrent modification lock)              |
-+-----------------------------------------------------------------------------------+
-                                      |
-                                      | Verified Operation & Sandbox Spec
-                                      v
-+-----------------------------------------------------------------------------------+
-| OS-BACKED SANDBOX RUNNER & SEMANTIC DIFF ENGINE                                   |
-| - Direct executable spawn without shell expansion                                 |
-| - Isolated temporary HOME, scrubbed environment allowlist                         |
-| - Capability verification (Network Deny, ReadOnly, ProcessTree termination)        |
-| - TypeScript/JavaScript/JSON AST semantic diffing                                 |
-+-----------------------------------------------------------------------------------+
-                                      |
-                                      | Execution Telemetry & Artifact Digests
-                                      v
-+-----------------------------------------------------------------------------------+
-| INTEGRITY, REPLAY & ATTESTATION CHAIN                                             |
-| - Tamper-evident SHA-256 audit log chain                                          |
-| - Deterministic replay manifest with 13-category drift detection                  |
-| - DSSE canonical JSON serialization and Ed25519 Attestation envelope              |
-| - State Decision: VERIFIED | FAILED | NOT VERIFIED | BLOCKED                     |
-+-----------------------------------------------------------------------------------+
-```
+Environment inheritance is enabled by default. Allowlisting requires disabling
+inheritance. Redaction is pattern-based. macOS/POSIX and native Windows cannot
+provide mandatory network denial or read-only workspace. Check's executor requests
+writable workspace. Linux isolation requires usable bwrap. Thirteen replay enum
+values include reserved categories; default replay verification does not rerun.
 
----
+## Keys
 
-## 3. Threat Model and Mitigations
+SHA-256 digests and Ed25519 policy/approval/attestation signatures are implemented.
+DSSE payloads use the project's canonicalization implementation. Policy signatures
+cover enforcementPolicy, not every configuration property. Registry roles are
+security-lead, release-manager, lead-maintainer, and developer. Identity keygen
+writes PEM files under ignored `.safe-change/keys/`; protect approved signing keys
+and registry ownership externally. Never commit/log private keys.
 
-| Threat ID | Threat Description | Attack Vector | Machine-Enforced Mitigation |
-| :--- | :--- | :--- | :--- |
-| **THREAT-01** | One-character authorization inversion | Agent modifies `if (authorized)` to `if (!authorized)` | AST Semantic Diff parses unary negation changes and flags as `CRITICAL` severity with automatic assurance elevation. |
-| **THREAT-02** | Guard and early-return removal | Agent removes auth check or error throw before sensitive operation | AST Diff tracks control flow branch nodes and flags removed guards. |
-| **THREAT-03** | Test assertion weakening or skip injection | Agent adds `it.skip()` or removes `expect()` assertions to make suite pass | AST Diff detects `.skip`, `.todo`, and removed assertion statements in test suites. |
-| **THREAT-04** | Error swallowing | Agent changes `throw err` to `console.warn` or empty `catch {}` block | AST Diff identifies catch clauses with empty or non-rethrowing bodies. |
-| **THREAT-05** | Shell injection via untrusted commands | Arbitrary shell syntax (`|`, `;`, `&&`, `$()`) in command arguments | Sandbox forbids shell execution (`shell: false`), resolving executable paths directly. |
-| **THREAT-06** | Inherited credential leakage | Process inherits `AWS_SECRET_ACCESS_KEY`, `NPM_TOKEN`, or private tokens | Strict environment allowlist scrubs all unapproved variables; streaming secret redactor blocks output on leak. |
-| **THREAT-07** | Process tree escape on timeout | Child spawns detached background daemons surviving timeout | Recursive process-tree termination kills all descendant PIDs before finalizing check. |
-| **THREAT-08** | Symlink and path traversal breakout | Symlinks pointing outside repo root or `../` path components | Path-safety resolver checks realpath and aborts if canonical path escapes workspace boundary. |
-| **THREAT-09** | Replay spoofing and environment drift | Replay executed against different commit or modified dependencies | Replay runner validates commit hash, lockfile hashes, policy digest, and workspace fingerprint. |
-| **THREAT-10** | Forged or replayed approval grants | Attacker reuses approval from previous session or modifies resource | Ed25519 signature binds request ID, repo hash, resource, capability, nonce, and previous grant digest. |
-| **THREAT-11** | Self-approval by rogue agent | Agent attempts to sign its own capability grant | Approval verification checks `requester !== approverIdentity` and validates role against capability owner. |
-| **THREAT-12** | Revoked or expired approver key | Attacker signs using revoked or expired private key | Registry enforces validity timestamps (`validFrom`, `validUntil`) and explicit revocation list. |
-| **THREAT-13** | Attestation tampering or payload confusion | Attacker modifies 1 byte in evidence bundle or substitutes payload | DSSE envelope domain-separates type and payload; RFC 8785 canonical serialization validates Ed25519 signature. |
-| **THREAT-14** | Unsupported sandbox false claim | Environment claims network denial without OS enforcement | Capability detector fails closed (`BLOCKED`) if required isolation is unsupported by OS provider. |
+## Recommended orchestration, not automatic CLI behavior
 
----
-
-## 4. Cryptographic Key Management & Ownership
-
-- **Algorithms**: Ed25519 (RFC 8032) for all signatures; SHA-256 (FIPS 180-4) for digests; RFC 8785 JSON Canonicalization Scheme (JCS) for deterministic serialization.
-- **Key Separation**:
-  - `Policy Key`: Root organizational key used to sign `.safe-change.json`.
-  - `Approver Keys`: Individual user/approver keys with defined roles (`security-lead`, `maintainer`, `release-manager`).
-  - `Attestation Key`: Verification authority key used by automated high-assurance build/sync pipelines.
-- **Key Storage**:
-  - Private keys are NEVER stored in repository files, logs, artifacts, diffs, or evidence bundles.
-  - The repository stores only public keys, key IDs, validity windows, and revocation lists in `.safe-change/identities.json` or config.
-  - Signing operations consume private keys via secure in-memory buffers or environment paths without echoing to output.
-
----
-
-## 5. Verification Pipeline State Machine
-
-```
-   [Start Verification]
-             |
-             v
-   [Lease & Baseline Check] --------(Fail)------> [NOT VERIFIED]
-             |
-             v
-   [Workspace Fingerprint] ---------(Drift)-----> [FAILED]
-             |
-             v
-   [Capability & Signed Approvals] -(Denied)----> [BLOCKED]
-             |
-             v
-   [Sandbox Capability Check] ------(Missing)----> [BLOCKED]
-             |
-             v
-   [Sandboxed Command Execution] ---(Non-zero)--> [FAILED]
-             |
-             v
-   [AST Semantic Diff] -------------(Critical)--> [FAILED / ESCALATE]
-             |
-             v
-   [Deterministic Replay] ----------(Mismatch)--> [FAILED]
-             |
-             v
-   [Evidence & DSSE Attestation] ---(Invalid)---> [NOT VERIFIED]
-             |
-             v
-        [VERIFIED]
+```text
+Reviewed baseline and protected oracle policy
+  -> optional lease and authorization
+  -> bounded edit
+  -> required risk/semantic/repository gates
+  -> check --strict on stable inputs
+  -> fresh evidence
+  -> optional replay reexecution and attestation
+  -> external CI release approval
 ```
 
----
+Check alone does not acquire leases, intercept all writes, invoke all modules,
+require every signature, or authorize release. Fingerprint/oracle drift or input
+mutation can yield not-verified; current failure/blocking rules yield failed.
+Strict check exits nonzero unless verified. Plain check preserves its legacy
+no-new-regression contract. Stale/missing/unbound evidence is not-verified.
 
-## 6. Backward Compatibility & Failure Modes
-
-1. **Non-breaking Defaults**: Existing v0.3 configurations remain valid; optional features (attestation, semantic diff, signed approvals) activate when configured or invoked via CLI.
-2. **Fail-Closed Principle**: If a high-assurance policy requires a security capability (such as OS network isolation or signed approval) and the environment cannot enforce or verify it, the system returns `BLOCKED` or `NOT VERIFIED`, never a false `VERIFIED`.
-3. **Clear Diagnostic Codes**: All failures specify exact failure codes, missing capabilities, or differing AST node ranges.
+See [Verification integrity](verification-integrity.md) and [SECURITY.md](../SECURITY.md).

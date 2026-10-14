@@ -1,6 +1,6 @@
 # Guide
 
-A beginner-friendly guide to safe-change: setup, usage, troubleshooting, and key concepts.
+A beginner-friendly source guide. New main-branch features are not automatically in older npm releases. Confirm the approved version/commit; see [Verification integrity](docs/verification-integrity.md).
 
 ## What safe-change is
 
@@ -47,7 +47,7 @@ To use `safe-change` as a command, either:
 
 ### Native binary (optional)
 
-The `crates/safe-change-native/` directory contains an experimental Rust module for performance-critical file hashing. The prebuilt platform-specific packages (`@safe-change/darwin-arm64`, `@safe-change/win32-x64-msvc`, etc.) are not yet published to npm. Running `npm run build:native` requires a local Rust toolchain (rustc, cargo) and is entirely optional. The TypeScript CLI works without the native module.
+The optional Rust module supplies native helpers and platform packages. Verify availability of the exact approved version rather than assuming registry publication from this guide. Local native builds need Rust; end users can use the TypeScript fallback without Rust.
 
 ### Configure your project
 
@@ -107,8 +107,8 @@ This records:
 - The results of all configured checks
 - Git state (branch, commit, clean/dirty status)
 
-**What is excluded from hashing:**
-- Everything matched by `.gitignore` (e.g. `node_modules/`, `dist/`, build outputs, cache directories) is completely ignored and never read or hashed.
+**Coverage and hashing boundaries:**
+- Untracked ignored files are omitted. Files already tracked by Git remain included even when an ignore pattern matches them.
 - The `.safe-change/` directory is always excluded.
 - Binary files are read as raw binary buffers and hashed directly with SHA-256.
 - Symbolic links are hashed by their link target string (`readlink`) without following or dereferencing targets outside repository boundaries.
@@ -119,9 +119,9 @@ It works with dirty working trees. It never commits, stashes, or resets anything
 
 ### Branch-switching behavior
 
-A baseline is a point-in-time snapshot of the current working tree and check results. It does not record which Git branch was active when it was saved. If you `save` a baseline on `feature/auth`, then switch to `main`, then run `check`, the comparison will run against the `main` working tree using a baseline that was recorded on `feature/auth`. The results may be misleading because the file contents differ between branches for reasons unrelated to any agent's work.
+A baseline is a point-in-time snapshot of the current working tree and check results. It records the Git branch and commit and includes a workspace fingerprint. A branch mismatch is reported and fingerprint drift prevents verified status. If you `save` a baseline on `feature/auth`, then switch to `main`, then run `check`, the comparison will run against the `main` working tree using a baseline that was recorded on `feature/auth`. The results may be misleading because the file contents differ between branches for reasons unrelated to any agent's work.
 
-Best practice: always run `save` and `check` on the same branch. If you switch branches, run `safe-change save` again before resuming agent work.
+Best practice: stay on the baseline branch. After switching branches, investigate drift and review the intended state before explicitly accepting another baseline; do not automatically rebaseline to hide a failure.
 
 ### 2. Let the agent work
 
@@ -130,7 +130,7 @@ Use Cursor, Claude Code, Codex, Antigravity, or any other tool.
 ### 3. Check for regressions
 
 ```bash
-safe-change check
+safe-change check --strict
 ```
 
 This re-runs your configured checks and compares results against the baseline. It reports:
@@ -153,7 +153,7 @@ Shows a summary of file changes (added, modified, deleted, unchanged). Exact lin
 Add `--json` to any command for structured output:
 
 ```bash
-safe-change check --json
+safe-change check --strict --json
 ```
 
 ## Using with Coding Agents
@@ -165,14 +165,14 @@ When working with an AI coding agent:
 2. The agent checks if the CLI is available via `safe-change --version`.
 3. If available, the agent follows the safety workflow:
    - `safe-change save "<description>"` before risky edits.
-   - `safe-change check` immediately after modifications to catch regressions.
+   - `safe-change check --strict` immediately after modifications to catch regressions.
    - `safe-change diff` when a file change summary is needed.
-4. The skill enforces non-negotiable safety rules: the agent is forbidden from running `git commit`, `git stash`, `git reset`, `git clean`, or `git checkout`, preserving all uncommitted work.
+4. The skill instructs the agent to follow non-negotiable safety rules; it is not an OS enforcement boundary: the agent is forbidden from running `git commit`, `git stash`, `git reset`, `git clean`, or `git checkout`, preserving all uncommitted work.
 
 ## Agent Skill Installer
 
 safe-change includes production installer commands to manage agent skills.
-Version 0.1.1 supports 10 AI coding agents: Antigravity, Claude Code, Cursor, Codex, Cline, Kimi Code, Amp, OpenCode, Gemini CLI, and GitHub Copilot.
+The current source ships filesystem adapters for 10 AI coding agents: Antigravity, Claude Code, Cursor, Codex, Cline, Kimi Code, Amp, OpenCode, Gemini CLI, and GitHub Copilot.
 Status for all agents: **filesystem-validated** (verified at filesystem level; runtime verification in subsequent versions).
 
 ### Supported Agents and Installation Paths
@@ -204,7 +204,7 @@ safe-change install claude-code
 # Global scope
 safe-change install claude-code --scope global
 ```
-Skill is loaded contextually based on the description field. In Claude Code, reload skills using `/reload-skills`.
+The installer manages these filesystem paths. Confirm discovery/reload behavior with the installed client; live invocation remains pending evidence in [runtime-verification.md](docs/runtime-verification.md).
 
 #### Cursor (Anysphere)
 ```bash
@@ -214,7 +214,7 @@ safe-change install cursor
 # Global scope
 safe-change install cursor --scope global
 ```
-Installed into `.cursor/skills/safe-change`. Cursor discovers project-level skills within workspace rules and configurations.
+The installer manages these filesystem paths. Confirm discovery/reload behavior with the installed client; live invocation remains pending evidence in [runtime-verification.md](docs/runtime-verification.md).
 
 #### OpenAI Codex
 ```bash
@@ -224,7 +224,7 @@ safe-change install codex
 # Global scope
 safe-change install codex --scope global
 ```
-Uses community convention `.codex/skills/safe-change` alongside standard AGENTS.md rules.
+The installer manages these filesystem paths. Confirm discovery/reload behavior with the installed client; live invocation remains pending evidence in [runtime-verification.md](docs/runtime-verification.md).
 
 #### Cline
 ```bash
@@ -294,7 +294,7 @@ safe-change install antigravity
 # Global scope
 safe-change install antigravity --scope global
 ```
-Discovered automatically via `.agents/skills/` at workspace root or `~/.gemini/config/skills/` globally.
+The installer writes those project/global paths; actual discovery and automatic invocation remain pending runtime evidence.
 
 ### Installing All Agents (`install all`)
 
@@ -331,8 +331,8 @@ The installer provides strict guarantees to prevent data loss or unintended over
 
 | Code | Label | Meaning |
 | --- | --- | --- |
-| 0 | `OK` | Success / No new regressions detected. |
-| 1 | `NEW_FAILURE` | At least one previously passing check now fails. |
+| 0 | `OK` | Plain check: no new regressions. Strict check: verified status required. |
+| 1 | `NEW_FAILURE` | Regression/blocking rule, strict non-verified result, or rejected mutating baseline. |
 | 2 | `NO_BASELINE` / `STATE_ERROR` | State error / No baseline found or target not installed. |
 | 3 | `CONFIG_ERROR` | Configuration or argument parsing error. |
 | 4 | `NOT_GIT_REPO` | Not a Git repository (required for project operations). |
@@ -354,7 +354,7 @@ Create a `.safe-change.json` file in your project root. See the configuration se
 
 ### "No baseline found"
 
-Run `safe-change save` before running `safe-change check`.
+Run `safe-change save` before running `safe-change check --strict`.
 
 ### "Baseline file is corrupt"
 
@@ -370,7 +370,7 @@ Increase the `timeout` value in your `.safe-change.json` for that check.
 
 ### Exit code 0 but checks are failing
 
-Exit code 0 means no NEW regressions. If checks were already failing at baseline time, they show as `fail-fail` (still failing). This is intentional: safe-change reports what got worse, not what was already broken.
+Plain `check` exit code 0 means no NEW regressions; `check --strict` instead rejects any non-verified status. If checks were already failing at baseline time, they show as `fail-fail` (still failing). This is intentional: safe-change reports what got worse, not what was already broken.
 
 ## Update
 

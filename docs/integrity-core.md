@@ -1,6 +1,6 @@
 # Integrity Core
 
-The v0.4 Integrity Core binds an editing session to one writer, one workspace identity, bounded verification output, and a checksummed evidence bundle.
+The Integrity Core provides cooperative writer leases, workspace fingerprints, bounded verification output, and checksummed evidence. These controls are separate; they do not impose mandatory OS locking.
 
 ## Safe workflow
 
@@ -12,7 +12,7 @@ safe-change fingerprint check
 # Apply the bounded change.
 
 safe-change assess --json
-safe-change check --json
+safe-change check --strict --json
 safe-change evidence session-20260929 cursor
 safe-change audit verify
 safe-change lease release session-20260929
@@ -70,12 +70,13 @@ The bundle stores no source file bodies and no captured command output. It recor
 
 Lease and evidence operations append events to `.safe-change/events.jsonl`. Every event commits to the previous event digest. `safe-change audit verify` recomputes the chain and fails if an event was changed, removed, reordered, or inserted without rebuilding all following digests.
 
-This local hash chain detects tampering but is not yet an externally anchored signature. Sigstore signing, trusted timestamps, remote transparency anchoring, and deterministic replay remain follow-up milestones.
+The local hash chain is not externally anchored and can be rebuilt by a local state writer. Replay and optional Ed25519 attestations exist as separate commands; trusted timestamps and remote transparency anchoring are not provided by this chain.
 
 ## Current boundaries
 
 - The lease is enforced by Safe-Change-aware clients; operating-system mandatory locking remains future work.
-- Evidence is checksummed but not yet signed by a trusted identity.
+- Evidence bundles are checksummed by default. Optional attestations can sign a payload separately; the trust of the signer must be established externally.
 - Fingerprints intentionally hash remote identity instead of storing the remote URL.
 - Secret detection is pattern-based and can produce false positives or miss unknown formats.
-- Network isolation, executable allowlists, environment allowlists, and resource quotas belong to the command-sandbox milestone.
+- Command allowlists/output controls exist. Network denial requires usable Linux bwrap; macOS/POSIX and native Windows requests block. CPU/memory/fd quotas are not implemented.
+- Source-bound report freshness and protected oracle inputs are described in [Verification integrity](verification-integrity.md). Stale/missing/unbound evidence is not-verified; checksums alone do not prove freshness.

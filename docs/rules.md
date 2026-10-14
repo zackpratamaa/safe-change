@@ -6,7 +6,7 @@ Safety rules establish explicit boundaries and invariants that AI coding agents 
 
 While `safe-change check` compares baseline test outputs to identify regressions in code behavior, safety rules evaluate file system operations and change volumes directly. Rules can prohibit the deletion of critical directories, flag modifications to lockfiles, place limits on bulk file edits, or require specific check commands to pass.
 
-Rules are stored in `.safe-change/rules.json` and are evaluated automatically on every `safe-change check` invocation.
+Rules are stored in `.safe-change/rules.json` and are evaluated automatically on every `safe-change check` invocation, including strict mode. Rules alone do not turn a zero-check run into verified status; use `check --strict --json` for final approval and inspect the result.
 
 ## CLI Usage
 

@@ -63,21 +63,21 @@ The primary operational cockpit, preserving the four core monitoring panels:
 - **Change Budget Guardrails**: Side-by-side comparison of actual metrics versus allowed limits (max files changed, max additions/deletions, public API mutations, and lockfile change restrictions).
 
 ### 3. AST Semantic Security
-- **Syntax Tree Diff Engine**: Deep syntactic inspection powered by SWC and TypeScript AST parsers.
+- **Syntax Tree Diff Engine**: Heuristic inspection using the TypeScript compiler API and JSON adapter; no SWC parser is used.
 - **Breaking API Export Detection**: Identifies removed or renamed export symbols, modified function signatures, and structural AST regressions.
-- **Fail-Closed Boundaries**: Visual status of semantic safety policies preventing dangerous code mutations before checks execute.
+- **Fail-Closed Boundaries**: Displays semantic report findings; the dashboard does not itself intercept writes or automatically run semantic-diff before checks.
 
 ### 4. Verifiable Replay & Attestations
 - **Signed Attestation Envelopes**: Displays in-toto RFC 8785 Ed25519-signed attestation envelopes generated in `.safe-change/attestations/`.
-- **Deterministic Replay Bundles**: Displays recorded execution traces and environment snapshots stored in `.safe-change/replay/` for zero-drift verification.
+- **Deterministic Replay Bundles**: Displays replay manifests stored in `.safe-change/replay/`; metadata verification and requested reexecution are distinct. The UI does not itself prove a fresh rerun.
 
 ### 5. Identity & Trust Registry
-- **Authorized Approvers**: Lists enrolled identities, public keys (RFC 8032 Ed25519 Hex), and authorized capability scopes (`deploy`, `override`, `sign-attestation`).
+- **Authorized Approvers**: Lists local enrolled identities and PEM public keys with registry roles (security-lead, release-manager, lead-maintainer, developer); capability policy is a separate configuration.
 - **Multi-Signer Quorum**: Displays multi-party approval requirements for critical enterprise operations.
 
 ### 6. Tamper-Evident Audit Chain
 - **Cryptographic Verification Banner**: Confirms SHA-256 hash chaining integrity (`CHAIN INTEGRITY VERIFIED (PASS)`).
-- **Immutable Audit Stream**: Displays every recorded lifecycle event with sequence index, actor identity, current event hash, and previous event link hash.
+- **Tamper-Evident Local Audit Stream**: Displays recorded events and hash links. This is a local digest chain, not immutable external storage; a local state writer can rebuild it.
 
 ---
 

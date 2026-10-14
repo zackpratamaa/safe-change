@@ -24,7 +24,7 @@ The policy requires review at syntax and token boundaries, including delimiters,
 
 ## Fail-Closed Behavior
 
-An agent must stop or downgrade its conclusion when evidence is missing, stale, cancelled, timed out, malformed, unavailable, or tied to another revision. `safe-change check` exit code `0` means no new regression; it does not convert an unresolved pre-existing failure into a verified state.
+An agent must stop or downgrade its conclusion when evidence is missing, stale, cancelled, timed out, malformed, unavailable, or tied to another revision. `safe-change check` exit code `0` means no new regression; it does not convert an unresolved pre-existing failure into a verified state. Use `check --strict --json` for final approval; the strict gate also rejects protected oracle drift and observed input mutation. See [Verification integrity](verification-integrity.md).
 
 ## Profile Inventory
 

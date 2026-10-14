@@ -1,167 +1,101 @@
 # Safe-Change Verifiable Execution Guide
 
-This document is the operational reference for Safe-Change Ultra Enterprise Verifiable Execution (v0.4).
+This describes current source, not proof that every feature is in an older npm
+release. Check your installed version/commit. These modules are separate controls;
+`check --strict` does not automatically invoke them all. See
+[Verification integrity](verification-integrity.md).
 
-## Overview
-
-Safe-Change Verifiable Execution adds five cryptographic, AST-level, and OS-level security layers:
-1. **AST Semantic Diff Engine**: Detects semantic mutations (negation inversion, removed guards, test weakening, error swallowing).
-2. **Deterministic Replay Subsystem**: Records and executes verification sessions in isolated environments, reporting on 13 drift categories.
-3. **Cryptographic Attestation Framework**: Generates DSSE/in-toto RFC 8785 Ed25519-signed attestation envelopes for verified builds and sessions.
-4. **OS-Backed Command Sandbox**: Real operating-system process isolation, direct executable path resolution, scrubbed environment, and process-tree termination.
-5. **Approval Identity Signing Registry**: Ed25519-signed capability grants, identity registry management, key rotation, and revocation checking.
-
----
-
-## 1. AST Semantic Diff Engine
-
-Inspect syntactic and semantic code modifications to detect dangerous mutations before executing checks or merging.
-
-### CLI Usage
+## Semantic diff
 
 ```bash
-# Compare working directory against base ref (default: HEAD)
-safe-change semantic-diff
-
-# Compare working tree against specific ref
-safe-change semantic-diff --base origin/main
-
-# Output JSON report
 safe-change semantic-diff --json
-
-# Fail with non-zero exit code if high or critical severity mutations are found
-safe-change semantic-diff --fail-on high
+safe-change semantic-diff --base origin/main --fail-on high --json
 ```
 
-### Detected Mutation Types
+Built-in TS/JS and JSON adapters use heuristics, not behavioral equivalence
+proofs. Default threshold is critical. Test skip/todo and lower `expect` count
+can be critical. Deleting/emptying non-empty supported source produces critical
+`source-file-deleted`; invalid Git bases fail closed. Check separately protects
+conventional tests, runner configs/manifests, CI, and custom oracle paths.
 
-| Category | Mutation | Severity |
-| :--- | :--- | :--- |
-| **Logic Inversion** | Changing `if (auth)` to `if (!auth)` | CRITICAL |
-| **Guard Removal** | Deleting authorization check or early-return | CRITICAL |
-| **Test Weakening** | Adding `.skip`, `.todo`, or deleting assertions | HIGH |
-| **Error Swallowing** | Empty `catch {}` block or converting throws to warnings | HIGH |
-| **Visibility Mutation** | Changing private member to public | MEDIUM |
-| **Dependency Injection** | Untrusted dynamic `require()` or `import()` | HIGH |
-
----
-
-## 2. Deterministic Replay Subsystem
-
-Record verification traces and replay them deterministically across environments to verify drift invariants.
-
-### CLI Usage
+## Replay
 
 ```bash
-# Record verification session into a replay manifest
-safe-change verify --record-replay
-
-# Replay a recorded manifest
-safe-change replay .safe-change/replays/replay-manifest.json
-
-# Enforce zero-drift policy
-safe-change replay .safe-change/replays/replay-manifest.json --strict
-
-# Output machine-readable JSON drift report
-safe-change replay .safe-change/replays/replay-manifest.json --json
+safe-change replay record session-example --json
+safe-change replay inspect .safe-change/replay/session-example-replay.json --json
+safe-change replay verify .safe-change/replay/session-example-replay.json --json
+safe-change replay verify .safe-change/replay/session-example-replay.json --reexecute --json
 ```
 
-### 13 Monitored Drift Categories
+Record uses baseline results/configured commands; it does not rerun checks.
+Default verify validates metadata/integrity/drift; `--reexecute` reruns in a
+detached worktree. Replay `--strict` is an alias for reexecution, distinct from
+check's verified-only gate. Runtime/path/platform differences may block replay.
+Metadata verification is not a fresh behavioral test.
 
-1. `COMMIT_HASH_MISMATCH`: Replay executed against different git commit.
-2. `DIRTY_WORKSPACE`: Working directory contains unstaged/untracked changes.
-3. `LOCKFILE_HASH_MISMATCH`: `package-lock.json` or equivalent was modified.
-4. `TOOLCHAIN_VERSION_MISMATCH`: Node, npm, or compiler version differs from recording.
-5. `ENVIRONMENT_DRIFT`: Permitted environment variables changed values.
-6. `EXIT_CODE_MISMATCH`: Command exit code differed between recording and replay.
-7. `EXECUTION_DURATION_ANOMALY`: Step duration exceeded historical threshold (>300%).
-8. `OUTPUT_DIGEST_MISMATCH`: SHA-256 digest of stdout/stderr deviated from recorded baseline.
-9. `POLICY_DIGEST_MISMATCH`: Enforcement policy was updated after recording.
-10. `FINGERPRINT_MISMATCH`: Workspace merkle root drifted.
-11. `FILE_MODIFICATION_OUTSIDE_BUDGET`: Replay modified files outside change budget.
-12. `UNRECORDED_COMMAND_EXECUTION`: Replay encountered unexpected sub-commands.
-13. `UNAUTHORIZED_CAPABILITY_REQUEST`: Replay requested ungranted capability.
+The declared categories in `src/replay/types.ts` are:
+`REPOSITORY_DRIFT`, `COMMIT_DRIFT`, `CONFIGURATION_DRIFT`, `POLICY_DRIFT`,
+`DEPENDENCY_DRIFT`, `ENVIRONMENT_DRIFT`, `COMMAND_DRIFT`, `OUTPUT_DRIFT`,
+`EXIT_STATUS_DRIFT`, `ARTIFACT_DRIFT`, `SECRET_REDACTION_DRIFT`,
+`SANDBOX_CAPABILITY_DRIFT`, and `NON_DETERMINISTIC_RESULT`.
+`ARTIFACT_DRIFT` and `SANDBOX_CAPABILITY_DRIFT` currently have no independent
+runner detector; thirteen declared categories do not mean thirteen complete
+detectors. Exit/output/redaction/duration comparison needs reexecution.
 
----
-
-## 3. Cryptographic Attestation Framework
-
-Issue DSSE (Dead Simple Signing Envelope) formatted in-toto compliant attestations over verification results, binding git commit, evidence bundle, audit log, and policy digest.
-
-### CLI Usage
+## Identity and approvals
 
 ```bash
-# Generate Ed25519 signing keypair
-safe-change identity keygen --output .keys/attestation-key.json
-
-# Attest the current workspace verification state
-safe-change attest --key-path .keys/attestation-key.json --key-id "build-authority-1"
-
-# Verify an attestation envelope
-safe-change attest verify .safe-change/attestations/bundle.attestation.json \
-  --public-key <ED25519_HEX_PUBLIC_KEY>
+safe-change identity keygen lead-sec-01 --json
+safe-change identity register lead-sec-01 .safe-change/keys/lead-sec-01.public.pem security-owner security-lead 365 --json
+safe-change identity list --json
+safe-change identity verify --json
+safe-change approval sign <request-id> security-owner lead-sec-01 .safe-change/keys/lead-sec-01.private.pem security-lead --json
+safe-change approval verify <request-id> --json
 ```
 
----
+Create a scoped approval request before signing it. Keygen writes PEM keys under
+`.safe-change/keys/`, prevents overwrite, and restricts private-file permissions
+where supported. Keep `.safe-change/` ignored. Generated keys alone do not prove
+organizational trust. Registry roles: security-lead, release-manager,
+lead-maintainer, developer. Legacy `approval grant` identifiers are not
+cryptographically authenticated; signed grants are a distinct route.
 
-## 4. OS-Backed Command Sandbox
-
-Run commands with operating system process isolation, capability enforcement, and scrubbed environment allowlists.
-
-### Platform Isolation Matrix
-
-| Capability | Linux | macOS (Darwin) | Windows |
-| :--- | :--- | :--- | :--- |
-| **Executable Resolution** | Direct path / `which` | Direct path / `which` | Direct `node.exe` + `npm-cli.js` (No `cmd.exe`) |
-| **Shell Expansion** | Disabled (`shell: false`) | Disabled (`shell: false`) | Disabled (`shell: false`) |
-| **Isolated HOME** | Unique temp directory | Unique temp directory | Unique temp directory |
-| **Env Sterilization** | Strict allowlist | Strict allowlist | Strict allowlist |
-| **Process Tree Kill** | `kill -9 -<PGID>` | `kill -9 -<PGID>` | `taskkill /pid <PID> /t /f` |
-| **Network Denial** | Supported (`unshare -n` / capability check) | Supported (`sandbox-exec` / deny) | Emulated via proxy loopback (Reported capability) |
-| **Read-Only Root** | Supported | Supported | Supported via workspace isolation |
-
----
-
-## 5. Approval Identity Signing Registry
-
-Cryptographically sign capability exception requests and verify approval identity chains.
-
-### CLI Usage
+## Attestation
 
 ```bash
-# Generate approver keypair
-safe-change identity keygen --output .keys/approver-lead.json
-
-# Register approver in workspace identity registry
-safe-change identity register \
-  --key-id "lead-sec-01" \
-  --name "Security Lead" \
-  --email "sec-lead@corp.internal" \
-  --role "security-lead" \
-  --public-key <ED25519_PUBLIC_KEY_HEX>
-
-# List registered approver identities
-safe-change identity list
-
-# Sign an approval request
-safe-change approval sign <REQUEST_ID> \
-  --key-path .keys/approver-lead.json \
-  --key-id "lead-sec-01"
-
-# Verify signed approval grants for a request
-safe-change approval verify <REQUEST_ID>
+safe-change attest create session-example --private-key /secure/approved-attestation.private.pem --key-id build-authority-1 --json
+safe-change attest verify .safe-change/attestations/session-example.attestation.json --public-key /secure/approved-attestation.public.pem --json
 ```
 
----
+Creation requires an approved key (`--private-key` or SAFE_CHANGE_ATTESTATION_KEY),
+a passing baseline, clean committed workspace, verified checksummed evidence for
+the session, replay verification, a non-blocking semantic report, and valid audit
+chain. Prepare these prerequisites in sequence and read returned output paths.
+Do not reuse stale inputs. Valid signatures prove the signed payload, not
+arbitrary code correctness or organizational trust; verification does not rerun
+tests by itself.
 
-## 6. Migration Guide (v0.3 -> v0.4)
+## Actual sandbox matrix
 
-### Backward Compatibility
-- Existing `.safe-change.json` policy files are 100% backward compatible.
-- All v0.3 commands (`check`, `verify`, `diff-budget`, `lease`, `baseline`, `policy`) function without modifications.
-- The `commandSandbox` now resolves executables directly without `cmd.exe` on Windows, eliminating Node 18+ `EINVAL` warnings (CVE-2024-27980).
+| Capability | Linux | macOS/POSIX fallback | Native Windows |
+|---|---|---|---|
+| Direct spawn, no shell expansion | Yes | Yes | Yes; Node/npm avoid cmd.exe |
+| Temporary HOME, output limits | Yes | Yes | Yes |
+| Environment allowlist | With inheritance disabled | With inheritance disabled | With inheritance disabled |
+| Process-tree termination | Implemented | Implemented | Implemented |
+| Mandatory network denial | Requires usable bwrap | Unavailable; request blocks | Unavailable; request blocks |
+| Provider read-only workspace capability | Requires usable bwrap | Unavailable | Unavailable |
+| CPU/memory/fd quotas | Not implemented | Not implemented | Not implemented |
 
-### Recommended Next Steps for Enterprise Repositories
-1. Add `.keys/` to `.gitignore` (ensure private keys are never committed).
-2. Configure trusted approver public keys in `.safe-change/identities.json`.
-3. Enable attestation signing in CI pipeline post-verification.
+The check executor requests writable workspace and inherits environment/network
+by default. DEGRADED mode may run; mandatory unavailable isolation blocks.
+Linux probes bwrap availability with `--version`; actual startup may still fail.
+This is a sandbox for configured checks, not all actions of an AI agent. Proxy
+variables are not mandatory network isolation.
+
+## Adoption
+
+Use `safe-change --help` and actual handlers as CLI source of truth. Use
+`check --strict --json` for final verification. Review changed oracle inputs
+before explicit baseline acceptance. Required authorization, risk, replay,
+attestation, and release approvals need mandatory external orchestration.

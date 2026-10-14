@@ -1,5 +1,7 @@
 # Installer Architecture and Lifecycle Specification
 
+> Historical design snapshot for Milestone C.2, not the current installer implementation. For current operation use [GUIDE.md](../GUIDE.md) and [runtime evidence](runtime-verification.md). Earlier not-implemented statements below refer to that milestone.
+
 This document defines the architectural specification, safety model, lifecycle state machine, and path boundary policies for the proposed `safe-change` installer.
 
 Verified Baseline Commit:

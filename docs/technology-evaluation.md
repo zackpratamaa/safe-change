@@ -1,5 +1,7 @@
 # Technology Evaluation: TypeScript vs TypeScript + Rust Helper
 
+> Historical research/design snapshot, not current operational instructions or live-runtime certification. For current behavior use [Verification integrity](verification-integrity.md), [MCP setup](mcp-setup.md), and the [runtime evidence matrix](runtime-verification.md). Earlier phase/test-count statements below describe that snapshot.
+
 Verified Baseline Status:
 "Filesystem adapter packaging validated; Antigravity runtime discovery not independently verified."
 

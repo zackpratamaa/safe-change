@@ -1,7 +1,7 @@
 # safe-change Roadmap
 
 This document tracks the planned development milestones
-for safe-change from current release to v1.0.
+for safe-change through v1.0 and subsequent source hardening. Done means implemented in source, not universal security guarantees or live per-agent verification. See [runtime evidence](docs/runtime-verification.md) and [verification boundaries](docs/verification-integrity.md).
 
 Status labels: Done | In Progress | Planned
 
@@ -33,10 +33,10 @@ Status labels: Done | In Progress | Planned
 
 - Expose safe-change as a Model Context Protocol server
 - Tools: safe_change_save, safe_change_check,
-  safe_change_diff, safe_change_status
-- stdio transport, zero configuration
-- Agent setup documentation for all 10 supported agents
-- Agents can invoke safe-change directly without SKILL.md
+  safe_change_diff, safe_change_status, safe_change_log
+- stdio transport; clients must configure the server and launch environment
+- Generic stdio server setup and evidence requirements; vendor-specific client setup requires current vendor documentation
+- Compatible clients can invoke tools without SKILL.md; live per-agent routes remain pending evidence
 
 ## v0.2.0 -- Safety Observability & Guardrails (Done)
 
@@ -75,7 +75,7 @@ Status labels: Done | In Progress | Planned
 - In-toto RFC 8785 Ed25519 cryptographic attestations and deterministic replay (Done)
 - Streaming secret-output blocker for credentials, tokens, and keys (Done)
 - Capability-based agent permissions and PDP/PEP authorization (Done)
-- OS-backed command sandbox with process tree isolation and environment scrubbing (Done)
+- Command timeout/process-tree controls and optional environment allowlisting (Done); default inheritance and provider isolation limits remain documented
 - Ed25519 approval identity trust registry and multi-party signing (Done)
 - Enterprise Liquid Glass Dashboard with `/SAFE-CHANGE` brand mark, 6 Hero Metrics, and 6 Segments (Done)
 - Zero-dependency embedded REST telemetry API endpoints (Done)
