@@ -41,13 +41,16 @@ export function changedVerificationInputs(
   repoRoot: string, baseline: Baseline,
   current: Readonly<Record<string, FileEntry>>, config: SafeChangeConfig,
 ): string[] {
-  const commandFiles = new Set(config.checks.flatMap(check => check.args)
+  const commandFiles = new Set(config.checks.flatMap(check => [check.executable, ...check.args])
     .map(arg => isAbsolute(arg) ? relative(repoRoot, arg) : arg)
     .map(arg => arg.replace(/\\/g, "/").replace(/^\.\//, ""))
     .filter(arg => !arg.startsWith("../") && /\.(?:[cm]?js|tsx?|jsx|py|sh|ps1)$/.test(arg)));
   const names = new Set([...Object.keys(baseline.files), ...Object.keys(current)]);
   return [...names].filter(name => {
-    const protectedInput = /(^|\/)(__tests__|tests?|specs?)(\/|$)/i.test(name) ||
+    const runnerConfiguration = /(^|\/)(package\.json|Makefile|pyproject\.toml|Cargo\.toml|pytest\.ini|tox\.ini|setup\.cfg|\.nycrc(?:\.json)?|(?:vitest|jest|playwright|cypress)\.config\.[^/]+)$/i.test(name) ||
+      /^\.github\/workflows\//.test(name);
+    const protectedInput = runnerConfiguration ||
+      /(^|\/)(__tests__|tests?|specs?)(\/|$)/i.test(name) ||
       /\.(test|spec)\.[^/]+$/i.test(name) ||
       commandFiles.has(name) ||
       (config.protectedVerificationPaths ?? []).some(pattern => matchGlob(name, pattern));

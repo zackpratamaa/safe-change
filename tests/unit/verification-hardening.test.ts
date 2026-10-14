@@ -95,6 +95,22 @@ describe("Verification snapshot and oracle hardening", () => {
     await repo.writeFile("contracts/response.json", '{"expected":2}\n');
     expect((await check(true)).report.verificationInputDrift).toContain("contracts/response.json");
   });
+  it("guards package scripts even when the configured command is unchanged", async () => {
+    await repo.writeFile("package.json", '{"scripts":{"test":"node check.cjs"}}');
+    await save();
+    await repo.writeFile("package.json", '{"scripts":{"test":"node -e \\"process.exit(0)\\""}}');
+    const result = await check(true);
+    expect(result.code).toBe(1);
+    expect(result.report.verificationInputDrift).toContain("package.json");
+  });
+  it("guards CI workflow and runner configuration changes", async () => {
+    await repo.writeFile(".github/workflows/test.yml", "jobs:\n  test:\n    steps:\n      - run: npm test\n");
+    await repo.writeFile("vitest.config.ts", "export default { test: { include: ['tests/**'] } };\n");
+    await save();
+    await repo.writeFile(".github/workflows/test.yml", "jobs:\n  test:\n    steps:\n      - run: echo skipped\n");
+    await repo.writeFile("vitest.config.ts", "export default { test: { include: [] } };\n");
+    expect((await check(true)).report.verificationInputDrift).toEqual([".github/workflows/test.yml", "vitest.config.ts"]);
+  });
   it.each([["../outside"], ["/absolute"], ["C:/absolute"], [""]])(
     "rejects unsafe protected path configuration %j", async (path) => {
       await repo.writeFile(".safe-change.json", JSON.stringify({ version: 1, checks: [], protectedVerificationPaths: [path] }));

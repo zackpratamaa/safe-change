@@ -66,6 +66,9 @@ By default the check guards:
 - files under `test`, `tests`, `spec`, `specs`, and `__tests__`;
 - filenames containing `.test.` or `.spec.`;
 - repository-local script paths supplied as configured command arguments.
+- repository-local executable scripts, common runner configs/manifests
+  (`package.json`, `Makefile`, `pyproject.toml`, `Cargo.toml`, pytest/tox,
+  Vitest/Jest/Playwright/Cypress config, NYC config), and GitHub CI workflows.
 
 Adding, removing, or changing these files makes an otherwise passing check
 `not-verified`. This is deliberately conservative: legitimate test improvements
