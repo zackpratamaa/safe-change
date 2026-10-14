@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-14",
+  "platform": "Linux x64; Node 24.14.1; Python 3.13",
+  "toolAssets": [
+    {
+      "repo": "gitleaks/gitleaks",
+      "tag": "v8.30.1",
+      "asset": "gitleaks_8.30.1_linux_x64.tar.gz",
+      "sha256": "sha256:551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+      "verifiedAgainst": "official GitHub release asset digest",
+      "binarySha256": "88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509"
+    },
+    {
+      "repo": "aquasecurity/trivy",
+      "tag": "v0.75.0",
+      "asset": "trivy_0.75.0_Linux-64bit.tar.gz",
+      "sha256": "sha256:c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f",
+      "verifiedAgainst": "official GitHub release asset digest",
+      "binarySha256": "93f9da8e4ba5e0c1c76d8234ed2494cf9afb0a96fd21953e424bb795f3299b8e"
+    },
+    {
+      "repo": "google/osv-scanner",
+      "tag": "v2.7.0",
+      "asset": "osv-scanner_linux_amd64",
+      "sha256": "sha256:160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b",
+      "verifiedAgainst": "official GitHub release asset digest",
+      "binarySha256": "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b"
+    }
+  ],
+  "semgrepVersion": "1.168.0",
+  "playwrightVersion": "1.64.0",
+  "axeCoreVersion": "4.14.0",
+  "scannerCases": [
+    {
+      "case": "gitleaks-clean",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "durationSeconds": 1.37,
+      "fatalErrorDetected": false
+    },
+    {
+      "case": "semgrep-clean",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "durationSeconds": 3.85,
+      "fatalErrorDetected": false
+    },
+    {
+      "case": "trivy-secret-clean",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "durationSeconds": 0.35,
+      "fatalErrorDetected": false
+    },
+    {
+      "case": "gitleaks-finding",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 1.36,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    },
+    {
+      "case": "semgrep-finding",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 3.55,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    },
+    {
+      "case": "trivy-secret-finding",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 0.31,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    },
+    {
+      "case": "trivy-full-profile",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 10.2,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    },
+    {
+      "case": "osv-vulnerable",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 1.0,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    },
+    {
+      "case": "osv-clean",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "durationSeconds": 0.19,
+      "fatalErrorDetected": false
+    },
+    {
+      "case": "trivy-full-clean",
+      "exitCode": 0,
+      "expectedExitCode": 0,
+      "passed": true,
+      "durationSeconds": 2.19,
+      "fatalErrorDetected": false
+    },
+    {
+      "case": "trivy-misconfig",
+      "exitCode": 1,
+      "expectedExitCode": 1,
+      "passed": true,
+      "durationSeconds": 2.27,
+      "fatalErrorDetected": false,
+      "detectionConfirmed": true
+    }
+  ],
+  "scannerGate": [
+    {
+      "command": "save before",
+      "exitCode": 0,
+      "expected": 0,
+      "state": "verified"
+    },
+    {
+      "command": "check --strict",
+      "exitCode": 0,
+      "expected": 0,
+      "state": "verified"
+    },
+    {
+      "command": "quality gate --file quality-policy.json",
+      "exitCode": 0,
+      "expected": 0,
+      "state": "PASS"
+    },
+    {
+      "command": "check --strict",
+      "exitCode": 1,
+      "expected": 1,
+      "state": "failed"
+    },
+    {
+      "command": "quality gate --file quality-policy.json",
+      "exitCode": 1,
+      "expected": 1,
+      "state": "FAIL"
+    }
+  ],
+  "browser": {
+    "browser": "system Chromium via Playwright",
+    "localOnly": true,
+    "cases": [
+      {
+        "case": "tab-click-1440",
+        "passed": true
+      },
+      {
+        "case": "keyboard-activation-1440",
+        "passed": true
+      },
+      {
+        "case": "no-page-overflow-1440",
+        "passed": true
+      },
+      {
+        "case": "tab-click-390",
+        "passed": true
+      },
+      {
+        "case": "keyboard-activation-390",
+        "passed": true
+      },
+      {
+        "case": "no-page-overflow-390",
+        "passed": true
+      }
+    ],
+    "pageErrors": [],
+    "axeViolations": [],
+    "limitations": [
+      "Chromium only; no screen-reader or cross-browser certification",
+      "Dashboard browser test is not an IDE agent integration test"
+    ]
+  },
+  "playwrightReportAssessment": {
+    "schemaVersion": 1,
+    "status": "PASS_REPORTED",
+    "format": "playwright",
+    "inspected": 6,
+    "reasons": [
+      "Positive, internally consistent browser test results; assertion quality requires review"
+    ],
+    "limitations": [
+      "Report contents only; no signature, execution, source-binding or freshness authentication.",
+      "Regenerate reports in the same trusted check invocation; never use a stale JSON file as current scanner evidence."
+    ]
+  },
+  "liveIDE": {
+    "status": "BLOCKED_NOT_AVAILABLE",
+    "reason": "No installed/authenticated Claude, Codex, OpenCode or desktop IDE host; no native consent claim"
+  },
+  "npmPublication": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "No npm publication credentials; preview distribution is GitHub-only"
+  },
+  "limits": [
+    "Fixture validation is not a comprehensive scan of all user projects or independent security certification",
+    "Only recorded versions and Linux/Chromium were live-tested; no universal platform/model compatibility",
+    "No users have submitted preview feedback yet"
+  ]
+}

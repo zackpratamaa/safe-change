@@ -78,6 +78,7 @@ export class RollbackSession {
   private hasBackup = false;
   private restored = false;
   private disposed = false;
+  private restorationFailed = false;
 
   constructor(options: RollbackOptions) {
     this.targetDir = path.resolve(options.targetDir);
@@ -131,8 +132,10 @@ export class RollbackSession {
   public restore(): boolean {
     this.ensureNotDisposed();
 
-    if (!this.hasBackup || !fs.existsSync(this.backupDir)) {
-      return false;
+    if (!this.hasBackup) return false;
+    if (!fs.existsSync(this.backupDir)) {
+      this.restorationFailed = true;
+      throw new RollbackError(`Rollback backup is missing: ${this.backupDir}`, "RESTORE_BACKUP_MISSING", this.targetDir);
     }
 
     try {
@@ -146,9 +149,11 @@ export class RollbackSession {
         dereference: false,
       });
 
+      this.restorationFailed = false;
       this.restored = true;
       return true;
     } catch (err: any) {
+      this.restorationFailed = true;
       throw new RollbackError(
         `Failed to restore target directory from backup '${this.backupDir}': ${err?.message}`,
         "RESTORE_FAILED",
@@ -160,14 +165,14 @@ export class RollbackSession {
   /**
    * Cleans up the temporary backup directory.
    */
-  public cleanup(): void {
+  public cleanup(preserveBackup = false): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
 
     try {
-      if (fs.existsSync(this.backupDir)) {
+      if (!preserveBackup && !this.restorationFailed && fs.existsSync(this.backupDir)) {
         fs.rmSync(this.backupDir, { recursive: true, force: true });
       }
     } catch {
@@ -219,7 +224,8 @@ export function executeWithRollback<T>(
     try {
       session.restore();
     } catch (restoreErr) {
-      // Log or retain restore error if needed
+      session.cleanup(true);
+      throw new AggregateError([err, restoreErr], `Operation and rollback both failed. Backup retained at ${session.backupDir}; manual recovery required.`);
     }
     session.cleanup();
     throw err;

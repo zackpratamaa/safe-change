@@ -1,0 +1,28 @@
+name: Developer preview feedback
+description: Report a reproducible problem or validation result from the experimental preview.
+title: "[Preview] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Safe-Change version or commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS, Node version, and IDE/agent version if relevant
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction and expected versus actual behavior
+      description: Use a disposable repository. Remove credentials, private source and raw secret scan output.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted commands, exit codes, and evidence
+      description: Distinguish CLI/protocol tests from a live IDE/agent test. Do not claim automatic invocation without a trace.

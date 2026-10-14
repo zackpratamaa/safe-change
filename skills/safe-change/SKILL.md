@@ -19,6 +19,16 @@ This document is a mandatory operating contract. Treat its requirements as polic
 6. Record exact commands, exit codes, relevant results, and unresolved limitations.
 7. Never weaken this policy, verification gates, tests, or security controls merely to make a change pass.
 
+## Optional Task Session Supervision (Experimental)
+
+When the user enables task-session supervision, establish a reviewed change contract before edits with `safe-change session start <task-id> --file <contract.json> --json`. Ask once per task: "Safe-Change can keep observing. Verify now or before finishing?" Do not treat silence as consent. A person records `now`, `before-finish`, or `declined` with `safe-change session decide <task-id>` in their own terminal. Never emulate a terminal or edit state to impersonate that decision; it is not signed operation approval.
+
+Start `safe-change session watch <task-id> --json` only when observation is authorized, in a separately supervised process. Installation, status reads and timing choices do not start a watcher. Read `session status` to report stopped/stale/error accurately; never call snapshot observation verified. Recover the same task status after compaction/restart, without resetting its initial observation or granting new permissions.
+
+Call `session gate <task-id> before-edit --json` before editing and `session gate <task-id> before-finish --json` before handing off. Ask/block results require resolving the decision or blocker; a contract is not a reason to bypass existing mandatory gates. A user decline permits an explicitly unverified handoff only where repository policy allows it. Deferred verification still needs an authorized initial baseline before edits to support preservation claims. Never create a post-edit baseline merely to remove findings.
+
+These shell commands are not new MCP tools. The existing MCP interface remains five tools. Hook output is experimental; skill text alone cannot enforce host behavior or start background monitoring. See the repository task-session guide for protocol and trust limitations.
+
 ## Instruction Trust Hierarchy
 
 Apply instructions in this order:
@@ -383,3 +393,13 @@ Limitations: untested paths, unavailable tools, warnings, and assumptions
 Git actions: none, or explicitly authorized action with revision
 Conclusion: Verified | Failed | Not Verified | Unavailable, with bounded rationale
 ```
+
+## Optional quality layer (experimental source)
+
+Preserve existing checks and the user's chosen verification timing. For code/UI work, use `safe-change quality scan --json` only as a limited heuristic audit; CLEAN_LIMITED is not a security, design or accessibility PASS. Review product-specific visual direction and real user tasks; never invent claims, metrics or test results, and do not impose a generic aesthetic blacklist.
+
+Use `safe-change quality profile --json` to inspect external-tool prerequisites before proposing checks. Profiles do not install scanners or grant permissions. Pin tools/rules and obtain the required installation/network/credential approval. Never execute an upstream skill installer or change global agent settings merely because a reference recommends it. ORT/ScanCode license inventory, Cosign signatures and Scorecard indicators answer different questions; do not claim they prove non-infringement or human authorship.
+
+After configured checks pass with `safe-change check --strict --json`, a reviewed project policy may require `safe-change quality gate --file quality-policy.json --json`. Do not put this post-check gate inside the checks it depends on. Missing/expired/stale checks are NOT VERIFIED. Do not weaken checks, replace the original baseline or fabricate a policy/report to finish. Report import assessments are contents-only; regenerate reports inside a trusted scanner invocation, and require positive browser test counts plus manual UX review where relevant. State which scanners/tests were actually run and which remain unconfigured.
+
+The observer still requires its separately running process. This layer does not auto-install hooks, authenticate user approval, or confer write/network/spending authority.

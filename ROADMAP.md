@@ -7,6 +7,20 @@ Status labels: Done | In Progress | Planned
 
 ---
 
+## Next increment — Task-aware agent supervision (Unreleased)
+
+- Implemented in source: literal change contracts, expiring verification-timing choices, durable task state, foreground observation with heartbeat health, scope/protected-input gates and current-evidence binding.
+- Experimental: Claude-compatible edit/stop hook output; protocol/CLI tests only. No live IDE or universal hook enforcement claim.
+- Planned: authenticated native consent UI, automatic reviewed per-host integration, watcher supervision, specialized code/security/license quality modules, UI/UX contract evaluation, performance/cost budgets and Meta integration.
+- [Usage and boundaries](docs/task-sessions.md); [reference provenance](docs/reference-adaptation.md).
+
+## Quality increment (Unreleased, partial)
+
+- Implemented: limited original AST/UI heuristics; current-evidence required-check gate; conservative SARIF and Playwright report-only assessment; inert scanner templates and setup-required profiles.
+- Not completed: specialized cross-language maintainability analysis, full UI/UX contract parser, live browser/axe certification, cross-platform certification of external scanners, project-specific ORT/ScanCode license policy, Cosign identity/attestation policy and Scorecard/CodeQL findings policy.
+- Preview evidence: pinned Linux scanner fixtures, clean package/stdio MCP/hook smoke, Chromium desktop/mobile checks and scoped axe results. Not a live IDE consent certification.
+- No automatic IDE activation in consumer projects. [Usage and boundaries](docs/quality-gates.md); [pinned audit](docs/quality-reference-audit.md).
+
 ## v0.1.0 -- Core CLI (Done)
 
 - save, check, diff commands

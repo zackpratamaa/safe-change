@@ -23,6 +23,10 @@
 
 <br/>
 
+## Experimental task sessions (unreleased source)
+
+Task-scoped change contracts, interactive verification-timing choices, a separately started polling observer, and cooperative edit/finish gates are available in source. Observation is not verification, and installing a skill does not launch a watcher. The Claude-compatible hook adapter is protocol-tested, not live-IDE certified. See [task sessions](docs/task-sessions.md) and the [nine-repository reference ledger](docs/reference-adaptation.md).
+
 ## Why safe-change exists
 
 Autonomous AI coding agents are rewriting production codebases at unprecedented speed. When you delegate tasks to an AI agent, it touches dozens of files, mutates dependencies, and restructures critical architectural boundaries. The app might still compile and start, but subtle logic has been inverted, authorization guards removed, or regressions silently introduced — leaving developers guessing what broke and why.
@@ -518,3 +522,13 @@ Copyright © 2026 ZACK.PRATAMA — PT ZYNTRIX ARTIFICIAL INTELLIGENCE INDONESIA 
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=140&section=footer" />
 
 </div>
+
+## Experimental quality layer (unreleased source)
+
+`safe-change quality scan --json` runs narrow original code/UI heuristics, not a universal design/security audit. `quality profile` prints reviewed external-tool setup/check templates without installing or running them. `quality report sarif|playwright --file <repo-relative.json>` assesses report contents without authenticating their producer or freshness. `quality gate --file quality-policy.json` is a post-check delivery gate requiring current strict evidence for named checks.
+
+See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-repository audit](docs/quality-reference-audit.md), and [policy example](examples/quality/quality-policy.json). ORT/ScanCode/Cosign/Scorecard/CodeQL require project-specific policy integration; scanners and live browser checks are not automatically installed or certified. No source from restricted better-web-ui was copied.
+
+## Developer preview 1.1.0-preview.1
+
+Experimental opt-in preview, not a general-availability safety certification. The guarded [GitHub preview workflow](.github/workflows/preview.yml) publishes a prerelease only after same-commit validation; it does not publish npm packages or replace stable `latest`. Use the GitHub release tarball with `--omit=optional` for the tested TypeScript fallback route. See [installation, actual validation and known gaps](docs/preview-validation.md). Native IDE consent remains unverified.

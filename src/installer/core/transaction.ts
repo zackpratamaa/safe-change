@@ -247,6 +247,7 @@ export class InstallationTransaction {
         }
       }
     } catch (err: any) {
+      let recoveryFailure: unknown;
       // Rollback target from tempBackupDir if it was moved aside
       if (tempBackupDir && fs.existsSync(tempBackupDir)) {
         try {
@@ -254,12 +255,13 @@ export class InstallationTransaction {
             fs.rmSync(this.targetDir, { recursive: true, force: true });
           }
           fs.renameSync(tempBackupDir, this.targetDir);
-        } catch {
-          // preserve original error
+        } catch (restoreError) {
+          recoveryFailure = restoreError;
         }
       }
 
       this.abort();
+      if (recoveryFailure) throw new AggregateError([err, recoveryFailure], `Commit and rollback both failed. Backup retained at ${tempBackupDir}; manual recovery required.`);
       throw err;
     }
   }

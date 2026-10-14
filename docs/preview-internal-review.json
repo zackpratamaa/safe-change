@@ -1,0 +1,587 @@
+{
+  "scope": "Triage of 64 original empty-catch candidates, not an independent comprehensive security audit",
+  "findings": [
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "experiments/typescript-filesystem/boundary-poc.ts",
+      "line": 91,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/preflight-npm.mjs",
+      "line": 83,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/preflight-npm.mjs",
+      "line": 118,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/publish-orchestrator.mjs",
+      "line": 62,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/smoke-test-tarball.mjs",
+      "line": 96,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/smoke-test-tarball.mjs",
+      "line": 102,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/sync-version.mjs",
+      "line": 245,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "scripts/validate-release.mjs",
+      "line": 311,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/attestation/dsse.ts",
+      "line": 60,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/baseline/manager.ts",
+      "line": 89,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/attest.ts",
+      "line": 285,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/check.ts",
+      "line": 163,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/check.ts",
+      "line": 355,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/init.ts",
+      "line": 60,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/init.ts",
+      "line": 152,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "fixed",
+      "rationale": "Explicit gitignore update refuses unreadable/linked/non-regular content rather than replacing unknown content."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/init.ts",
+      "line": 171,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/rules.ts",
+      "line": 235,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/commands/save.ts",
+      "line": 200,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 218,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 229,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 231,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 247,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 249,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 288,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/dashboard/server.ts",
+      "line": 353,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "follow-up",
+      "rationale": "Fallback may conceal diagnostic/validation detail; do not treat fallback output as security approval. Further hardening needs targeted tests."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/adapters/base-adapter.ts",
+      "line": 70,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/adapters/registry.ts",
+      "line": 106,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/path-safety.ts",
+      "line": 46,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/rollback.ts",
+      "line": 28,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/rollback.ts",
+      "line": 173,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/rollback.ts",
+      "line": 221,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "fixed",
+      "rationale": "Automatic rollback now preserves the backup and reports both failures instead of deleting recovery data."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 32,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 228,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 244,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 257,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "fixed",
+      "rationale": "Failed transaction recovery is reported with both causes and backup location."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 280,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/installer/core/transaction.ts",
+      "line": 293,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/native/index.ts",
+      "line": 36,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/replay/recorder.ts",
+      "line": 90,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/replay/runner.ts",
+      "line": 179,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/runner/process-controller.ts",
+      "line": 32,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/runner/process-controller.ts",
+      "line": 58,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/runner/process-controller.ts",
+      "line": 68,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/runner/process-controller.ts",
+      "line": 74,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "src/sandbox/resolver.ts",
+      "line": 98,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-best-effort",
+      "rationale": "Reviewed scoped context: best-effort cleanup, optional display/feature fallback or secondary diagnostics; this is not verification evidence."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/fixtures/antigravity-fixture.ts",
+      "line": 80,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/fixtures/antigravity-fixture.ts",
+      "line": 180,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/fixtures/antigravity-fixture.ts",
+      "line": 187,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/fixtures/antigravity-fixture.ts",
+      "line": 194,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/helpers/temp-repo.ts",
+      "line": 73,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/antigravity-adapter.test.ts",
+      "line": 39,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/auto-detect.test.ts",
+      "line": 36,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/collision.test.ts",
+      "line": 24,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/commands.test.ts",
+      "line": 41,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/multi-adapter.test.ts",
+      "line": 48,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/ownership.test.ts",
+      "line": 26,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/path-safety.test.ts",
+      "line": 26,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/path-safety.test.ts",
+      "line": 129,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/rollback.test.ts",
+      "line": 22,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/installer/transaction.test.ts",
+      "line": 21,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/mcp/server.test.ts",
+      "line": 21,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/native/fallback.test.ts",
+      "line": 28,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/native/path-guard.test.ts",
+      "line": 27,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    },
+    {
+      "rule": "CODE-EMPTY-CATCH",
+      "path": "tests/unit/git-inspector.test.ts",
+      "line": 179,
+      "message": "Empty catch can conceal failure; handle it or explain and review the intentional suppression.",
+      "reviewedAtSource": "0416054ce4b105260e8c9ebd03478530ce2be44b",
+      "decision": "retained-test-cleanup",
+      "rationale": "Disposable fixture/experiment cleanup or path-detection fallback; not production verification."
+    }
+  ],
+  "counts": {
+    "retained-test-cleanup": 20,
+    "follow-up": 12,
+    "retained-best-effort": 29,
+    "fixed": 3
+  }
+}

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-preview.1] - 2026-10-14
+
+### Preview status
+- Experimental developer preview, not general availability or universal security/IDE certification.
+- Preserve backups and report both causes if installation and rollback fail; reject disappearance of known recovery backups.
+- Refuse known linked/non-regular init overwrite targets and preserve unreadable gitignore content.
+- Separate npm prerelease channel from latest; GitHub preview distribution does not publish npm packages.
+- Preview validation and source/license/tool boundaries are recorded in docs/preview-validation.md.
+
 ### Documentation
 - Align operational guides with strict verification, source/index coverage, branch fingerprints, actual replay/identity/attestation syntax, sandbox limits, and five MCP tools.
 - Mark seven research/design snapshots as historical; remove machine-specific links and unverified universal vendor configuration claims.
@@ -21,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomically replace verification summaries.
 
 ### Added
+- Experimental `quality` CLI: original limited AST/UI audit, current-evidence named-check delivery gate, strict SARIF/Playwright report-only assessment, and inert external-scanner profiles.
+- Pinned 13-repository license/installer audit and explicit setup-required compliance/provenance boundaries; no scanner installers, runtime dependencies or restricted source vendored.
+- Experimental `session` lifecycle: change contracts, expiring human timing choice, observer heartbeat, scope/oracle gates, and binding to existing verification evidence.
+- Interactive-only timing-choice command; no agent-facing MCP consent setter. This is cooperative workflow state, not authenticated human approval.
+- Claude-compatible hook output adapter with explicit protocol-only validation limits; no automatic hook installation.
+- Nine-repository research provenance and delivery-boundary ledger; no vendored reference frameworks or license change.
 - `check --strict` and MCP `safe_change_check` `strict: true` for a verified-only gate, while preserving legacy plain-check exit behavior and replay's strict alias.
 - Regression coverage for stale evidence, source mutation, oracle weakening, configuration removal, fail-fail gate behavior, and deletion.
 - Explicit verification-integrity documentation covering migration and cooperative trust boundaries.

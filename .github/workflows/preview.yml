@@ -1,0 +1,86 @@
+name: Developer Preview
+on:
+  push:
+    branches: [feat/session-observer-contracts]
+  workflow_dispatch:
+concurrency:
+  group: developer-preview-${{ github.ref }}
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  validate:
+    name: Preview validation
+    if: github.repository == 'zackpratamaa/safe-change' && github.ref == 'refs/heads/feat/session-observer-contracts'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.x
+          cache: npm
+      - name: Install without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate experimental version and source
+        run: |
+          node -e 'if(!/^\d+\.\d+\.\d+-preview\.\d+$/.test(require("./package.json").version))process.exit(1)'
+          npm run version:check
+          npm run lint
+          npm run build
+          npm run test:coverage
+          npm audit --omit=dev --audit-level=high
+          node scripts/smoke-test-tarball.mjs
+      - name: Pack exact preview and checksums
+        run: |
+          mkdir preview-dist
+          npm pack --ignore-scripts --pack-destination preview-dist
+          node -e 'const fs=require("fs");fs.writeFileSync("preview-dist/preview-manifest.json",JSON.stringify({version:require("./package.json").version,commit:process.env.GITHUB_SHA,run:process.env.GITHUB_RUN_ID,channel:"experimental-github-preview",npmPublished:false,nativePackagesPublished:false,liveIDEVerified:false},null,2)+"\n")'
+          cp docs/preview-validation.md preview-dist/
+          cd preview-dist
+          sha256sum *.tgz preview-manifest.json preview-validation.md > SHA256SUMS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-developer-preview
+          path: preview-dist/
+          if-no-files-found: error
+  publish:
+    name: Publish GitHub preview
+    needs: validate
+    if: github.repository == 'zackpratamaa/safe-change' && github.ref == 'refs/heads/feat/session-observer-contracts'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+      checks: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20.x
+      - name: Require all independent same-commit CI checks
+        run: node scripts/wait-preview-checks.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-developer-preview
+          path: preview-dist
+      - name: Verify artifact manifest and digests
+        run: |
+          cd preview-dist
+          sha256sum -c SHA256SUMS
+          node -e 'const m=require("./preview-manifest.json");if(m.commit!==process.env.GITHUB_SHA||m.npmPublished||m.liveIDEVerified||!/^\d+\.\d+\.\d+-preview\.\d+$/.test(m.version))process.exit(1)'
+      - name: Publish experimental GitHub prerelease only
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          node scripts/verify-preview-tag.mjs "$VERSION"
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --prerelease --latest=false \
+            --title "v$VERSION — Experimental Developer Preview" \
+            --notes-file docs/preview-validation.md preview-dist/*
+        env:
+          GH_TOKEN: ${{ github.token }}
