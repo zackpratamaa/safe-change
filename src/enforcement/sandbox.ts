@@ -13,7 +13,10 @@ export interface SandboxDecision {
 export function evaluateCommandSandbox(
   check: CheckDefinition,
   policy: CommandSandboxPolicy,
-  sourceEnvironment: NodeJS.ProcessEnv = process.env
+  sourceEnvironment: NodeJS.ProcessEnv = process.env,
+  options?: {
+    readonly osProviderHandlesNetworkDeny?: boolean;
+  }
 ): SandboxDecision {
   const reasons: string[] = [];
   const executableName = basename(check.executable).toLowerCase();
@@ -32,7 +35,7 @@ export function evaluateCommandSandbox(
       reasons.push(`Argument "${argument}" is denied by command policy.`);
     }
   }
-  if (policy.networkPolicy === "deny") {
+  if (policy.networkPolicy === "deny" && !options?.osProviderHandlesNetworkDeny) {
     reasons.push(
       "Network denial was requested but no mandatory OS isolation provider is configured."
     );

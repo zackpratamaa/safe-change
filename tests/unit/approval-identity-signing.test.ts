@@ -204,4 +204,96 @@ describe("Approval Identity Signing & Trust Verification", () => {
       thresholdResult.reasons.some((r) => r.includes("Insufficient approved signatures"))
     ).toBe(true);
   });
+
+  it("prevents a single owner with two different keyIds from satisfying threshold 2", () => {
+    // Generate a second key pair for alice
+    const approver1SecondKey = generateKeyPairSync("ed25519", {
+      publicKeyEncoding: { type: "spki", format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    });
+
+    const identity1SecondKey: IdentityPublicKey = {
+      keyId: "key-alice-backup",
+      publicKeyPem: approver1SecondKey.publicKey,
+      owner: "alice", // same owner!
+      role: "security-lead",
+      validFrom: new Date(Date.now() - 3600000).toISOString(),
+      validUntil: new Date(Date.now() + 36000000).toISOString(),
+      revoked: false,
+    };
+
+    const multiKeyRegistry: TrustRegistry = {
+      version: 1,
+      identities: [identity1, identity1SecondKey],
+    };
+
+    const grant1 = signApprovalGrant({
+      ...baseParams,
+      approverIdentity: "alice",
+      approverKeyId: "key-alice",
+      privateKeyPem: approver1.privateKey,
+    });
+
+    const grant2FromSameOwner = signApprovalGrant({
+      ...baseParams,
+      approverIdentity: "alice",
+      approverKeyId: "key-alice-backup",
+      previousGrantDigest: createHash("sha256")
+        .update(canonicalizeJson(grant1), "utf8")
+        .digest("hex"),
+      privateKeyPem: approver1SecondKey.privateKey,
+    });
+
+    const thresholdResult = verifyApprovalThreshold(
+      [grant1, grant2FromSameOwner],
+      multiKeyRegistry,
+      2
+    );
+
+    // Must fail because both keys belong to "alice"
+    expect(thresholdResult.valid).toBe(false);
+    expect(thresholdResult.distinctApproverCount).toBe(1);
+    expect(
+      thresholdResult.reasons.some((r) => r.includes("Insufficient approved signatures"))
+    ).toBe(true);
+  });
+
+  it("rejects grant with invalid/NaN expiration date", () => {
+    const validGrant = signApprovalGrant({
+      ...baseParams,
+      privateKeyPem: approver1.privateKey,
+    });
+    const grant = {
+      ...validGrant,
+      expiresAt: "invalid-not-a-date",
+    };
+
+    const result = verifySignedApprovalGrant(grant, registry);
+    expect(result.valid).toBe(false);
+    expect(result.reasons.some((r) => r.includes("expired"))).toBe(true);
+  });
+
+  it("rejects identity with invalid/NaN validity window", () => {
+    const invalidWindowIdentity: IdentityPublicKey = {
+      ...identity1,
+      keyId: "key-alice-nan",
+      validFrom: "invalid-from",
+      validUntil: "invalid-until",
+    };
+
+    const badRegistry: TrustRegistry = {
+      version: 1,
+      identities: [invalidWindowIdentity],
+    };
+
+    const grant = signApprovalGrant({
+      ...baseParams,
+      approverKeyId: "key-alice-nan",
+      privateKeyPem: approver1.privateKey,
+    });
+
+    const result = verifySignedApprovalGrant(grant, badRegistry);
+    expect(result.valid).toBe(false);
+    expect(result.reasons.some((r) => r.includes("validity window"))).toBe(true);
+  });
 });

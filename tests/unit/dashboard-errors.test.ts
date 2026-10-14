@@ -69,4 +69,16 @@ describe("Dashboard Server Failure Paths & Error Responses", () => {
   it("handles openBrowser without throwing", () => {
     expect(() => openBrowser("http://localhost:4242")).not.toThrow();
   });
+
+  it("includes client-side escapeHtml and security headers preventing XSS", async () => {
+    serverInstance = await startDashboardServer({
+      port: 0,
+      repoRoot: tempDir,
+    });
+
+    const res = await fetch(`${serverInstance.url}/`);
+    const html = await res.text();
+    expect(html).toContain("function escapeHtml(");
+    expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
+  });
 });

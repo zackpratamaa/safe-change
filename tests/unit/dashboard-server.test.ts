@@ -95,6 +95,9 @@ describe("Dashboard server", () => {
     const res = await fetch(`${serverInstance.url}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
+    expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
 
     const text = await res.text();
     expect(text).toContain("safe-change dashboard");
@@ -171,6 +174,23 @@ describe("Dashboard server", () => {
     expect(data).toHaveProperty("verified");
     expect(data).toHaveProperty("totalEvents");
     expect(Array.isArray(data.events)).toBe(true);
+  });
+
+  it("GET /api/audit returns verified: false and corrupted: true when audit log is malformed", async () => {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const auditDir = path.join(tempDir, ".safe-change");
+    await fs.mkdir(auditDir, { recursive: true });
+    await fs.writeFile(path.join(auditDir, "events.jsonl"), "corrupt-non-json-line\n");
+
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    const res = await fetch(`${serverInstance.url}/api/audit`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.verified).toBe(false);
+    expect(data.corrupted).toBe(true);
+    expect(data.totalEvents).toBe(0);
+    expect(data.error).toContain("invalid JSON");
   });
 
   it("GET /api/identity returns trust registry identities", async () => {

@@ -84,6 +84,21 @@ describe("command sandbox", () => {
     );
   });
 
+  it("allows command sandbox check when OS provider handles network denial", () => {
+    const decision = evaluateCommandSandbox(
+      {
+        name: "network",
+        executable: "node",
+        args: [],
+        timeout: 5,
+      },
+      { ...POLICY, networkPolicy: "deny" },
+      process.env,
+      { osProviderHandlesNetworkDeny: true }
+    );
+    expect(decision.allowed).toBe(true);
+  });
+
   it("does not spawn a blocked command", async () => {
     const result = await executeCheck(
       {

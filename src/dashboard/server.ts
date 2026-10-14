@@ -43,6 +43,9 @@ export async function createDashboardServer(
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Content-Length": Buffer.byteLength(html),
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
       });
       res.end(html);
       return;
@@ -188,9 +191,17 @@ export async function createDashboardServer(
         const verified = verifyAuditEvents(events);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ verified, totalEvents: events.length, events: events.slice(-50).reverse() }));
-      } catch {
+      } catch (err: unknown) {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ verified: true, totalEvents: 0, events: [] }));
+        res.end(
+          JSON.stringify({
+            verified: false,
+            corrupted: true,
+            error: err instanceof Error ? err.message : "Failed to load audit events",
+            totalEvents: 0,
+            events: [],
+          })
+        );
       }
       return;
     }

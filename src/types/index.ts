@@ -73,6 +73,7 @@ export interface CommandSandboxPolicy {
 export interface ApprovalPolicy {
   readonly thresholds: Readonly<Partial<Record<Capability, number>>>;
   readonly prohibitSelfApproval: boolean;
+  readonly requireSignedApprovals?: boolean;
   readonly maximumExceptionTtlSeconds: number;
 }
 

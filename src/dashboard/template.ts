@@ -1393,7 +1393,7 @@ export function renderDashboardHtml(): string {
               <span id="audit-integrity-badge" class="badge badge-clean">CHAIN INTEGRITY VERIFIED</span>
             </div>
             <div style="font-size: 12px; color: var(--text-caption); margin-top: 2px;">
-              Every operation links SHA-256 hashes of previous events. Any modification or truncation breaks the chain.
+              Every operation links SHA-256 hashes of previous events to detect payload modification or middle event omission.
             </div>
           </div>
         </div>
@@ -1429,6 +1429,16 @@ export function renderDashboardHtml(): string {
   </div>
 
   <script>
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     let globalLogEntries = [];
     let currentFilter = 'all';
     let selectedTimelineId = null;
@@ -1920,15 +1930,19 @@ export function renderDashboardHtml(): string {
         const isErr = r.severity === 'error';
         const cardCls = isErr ? 'rule-card rule-error' : 'rule-card rule-warn';
         const badgeCls = isErr ? 'badge-regression' : 'badge-warn';
-        const pattern = r.condition && r.condition.pattern ? r.condition.pattern : (r.condition && r.condition.type ? r.condition.type : 'custom');
+        const rawPattern = r.condition && r.condition.pattern ? r.condition.pattern : (r.condition && r.condition.type ? r.condition.type : 'custom');
+        const name = escapeHtml(r.name || r.id);
+        const severity = escapeHtml((r.severity || '').toUpperCase());
+        const description = escapeHtml(r.description || '');
+        const pattern = escapeHtml(rawPattern);
 
         return \`
           <div class="\${cardCls}">
             <div class="rule-row-head">
-              <span class="rule-name">\${r.name || r.id}</span>
-              <span class="badge \${badgeCls}">\${r.severity.toUpperCase()}</span>
+              <span class="rule-name">\${name}</span>
+              <span class="badge \${badgeCls}">\${severity}</span>
             </div>
-            <div class="rule-desc">\${r.description || ''}</div>
+            <div class="rule-desc">\${description}</div>
             <code class="rule-code mono">\${pattern}</code>
           </div>
         \`;
@@ -1973,14 +1987,14 @@ export function renderDashboardHtml(): string {
             <div class="signal-item">
               <div>
                 <div style="font-weight: 600; color: var(--text-main); font-size: 12px; display: flex; align-items: center; gap: 6px;">
-                  <span class="badge badge-info mono">\${s.category.toUpperCase()}</span>
-                  <span>\${s.reason}</span>
+                  <span class="badge badge-info mono">\${escapeHtml((s.category || '').toUpperCase())}</span>
+                  <span>\${escapeHtml(s.reason || '')}</span>
                 </div>
                 <div class="mono" style="font-size: 11px; color: var(--text-caption); margin-top: 4px;">
-                  \${(s.paths || []).slice(0, 3).join(', ')}\${s.paths && s.paths.length > 3 ? ' +' + (s.paths.length - 3) + ' more' : ''}
+                  \${escapeHtml((s.paths || []).slice(0, 3).join(', '))}\${s.paths && s.paths.length > 3 ? ' +' + (s.paths.length - 3) + ' more' : ''}
                 </div>
               </div>
-              <span class="badge badge-warn mono">+\${s.score} pts</span>
+              <span class="badge badge-warn mono">+\${escapeHtml(s.score)} pts</span>
             </div>
           \`).join('');
         }
@@ -2130,9 +2144,9 @@ export function renderDashboardHtml(): string {
 
       tbody.innerHTML = identities.map(id => \`
         <tr>
-          <td><strong style="color: var(--text-main);">\${id.id || id.name}</strong></td>
-          <td><span class="badge badge-info mono">\${(id.roles || ['approver']).join(', ')}</span></td>
-          <td><code class="hash-pill">\${(id.publicKey || id.key || 'n/a').slice(0, 24)}...</code></td>
+          <td><strong style="color: var(--text-main);">\${escapeHtml(id.id || id.name)}</strong></td>
+          <td><span class="badge badge-info mono">\${escapeHtml((id.roles || ['approver']).join(', '))}</span></td>
+          <td><code class="hash-pill">\${escapeHtml((id.publicKey || id.key || 'n/a').slice(0, 24))}...</code></td>
           <td><span class="badge badge-clean">ACTIVE</span></td>
         </tr>
       \`).join('');
@@ -2146,7 +2160,7 @@ export function renderDashboardHtml(): string {
       if (countBadge) countBadge.textContent = (audit.totalEvents || 0) + ' Events';
       if (integBadge) {
         integBadge.className = audit.verified ? 'badge badge-clean' : 'badge badge-regression';
-        integBadge.textContent = audit.verified ? 'CHAIN INTEGRITY VERIFIED (PASS)' : 'CHAIN INTEGRITY COMPROMISED (FAIL)';
+        integBadge.textContent = audit.verified ? 'CHAIN INTEGRITY VERIFIED (PASS)' : (audit.corrupted ? 'AUDIT LOG CORRUPTED (FAIL)' : 'CHAIN INTEGRITY COMPROMISED (FAIL)');
       }
 
       if (!tbody) return;
@@ -2163,11 +2177,11 @@ export function renderDashboardHtml(): string {
         const type = ev.type || ev.action || 'EVENT';
         return \`
           <tr>
-            <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${ev.timestamp || 'now'}</td>
-            <td><span class="badge badge-info mono">\${type}</span></td>
-            <td><strong style="color: var(--text-main);">\${ev.actor || 'system'}</strong></td>
-            <td><code class="hash-pill">\${curr.slice(0, 12)}...</code></td>
-            <td><code class="hash-pill" style="color: var(--text-caption);">\${prev.slice(0, 12)}...</code></td>
+            <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${escapeHtml(ev.timestamp || 'now')}</td>
+            <td><span class="badge badge-info mono">\${escapeHtml(type)}</span></td>
+            <td><strong style="color: var(--text-main);">\${escapeHtml(ev.actor || 'system')}</strong></td>
+            <td><code class="hash-pill">\${escapeHtml(curr.slice(0, 12))}...</code></td>
+            <td><code class="hash-pill" style="color: var(--text-caption);">\${escapeHtml(prev.slice(0, 12))}...</code></td>
             <td><span class="badge badge-clean">VALID LINK</span></td>
           </tr>
         \`;

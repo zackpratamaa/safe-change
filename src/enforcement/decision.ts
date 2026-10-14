@@ -121,8 +121,11 @@ export async function evaluateOperation(
           "Approval request does not match the requested operation.",
         );
       }
-      if (Date.parse(approval.expiresAt) <= Date.now()) {
-        reasons.push("Approval request has expired.");
+      const expiresAtMs = Date.parse(approval.expiresAt);
+      if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+        reasons.push(
+          "Approval request has expired or has an invalid expiration timestamp.",
+        );
       }
       let approvedCount: number;
       if ((approval.signedGrants?.length ?? 0) > 0) {
@@ -152,6 +155,11 @@ export async function evaluateOperation(
           );
         }
         approvedCount = signedResult.distinctApproverCount;
+      } else if (policy.approvals.requireSignedApprovals) {
+        reasons.push(
+          "Operation requires cryptographically signed approval grants, but no signed grants were provided.",
+        );
+        approvedCount = 0;
       } else {
         approvedCount = new Set(
           approval.grants.map((grant) => grant.approver),
@@ -161,6 +169,7 @@ export async function evaluateOperation(
         return {
           decision: "require-approval",
           reasons: [
+            ...reasons,
             `Operation has ${approvedCount} of ${threshold} required approval(s).`,
           ],
           capability: request.capability,

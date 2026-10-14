@@ -67,7 +67,13 @@ export function verifySignedApprovalGrant(
   const now = Date.now();
   const validFrom = new Date(identity.validFrom).getTime();
   const validUntil = new Date(identity.validUntil).getTime();
-  if (now < validFrom || now > validUntil) {
+  if (
+    !Number.isFinite(validFrom) ||
+    !Number.isFinite(validUntil) ||
+    validFrom > validUntil ||
+    now < validFrom ||
+    now > validUntil
+  ) {
     reasons.push(
       `Approver keyId '${identity.keyId}' is outside its validity window (${identity.validFrom} to ${identity.validUntil})`
     );
@@ -75,7 +81,7 @@ export function verifySignedApprovalGrant(
 
   // 4. Check Grant Expiration
   const grantExpires = new Date(grant.expiresAt).getTime();
-  if (now > grantExpires) {
+  if (!Number.isFinite(grantExpires) || now > grantExpires) {
     reasons.push(`Approval grant expired at ${grant.expiresAt}`);
   }
 
@@ -202,6 +208,8 @@ export function verifyApprovalThreshold(
   const reasons: string[] = [];
   const validKeyIds = new Set<string>();
   const validApproverIdentities = new Set<string>();
+  const validPrincipals = new Set<string>();
+  const validPublicKeys = new Set<string>();
   const seenNonces = new Set<string>();
   let expectedPreviousDigest = "";
 
@@ -233,17 +241,29 @@ export function verifyApprovalThreshold(
       continue;
     }
 
-    // Deduplicate: multiple signatures from one key count once
-    if (validKeyIds.has(grant.approverKeyId)) {
+    const identity = findIdentity(registry, grant.approverKeyId);
+    const principal = (identity?.owner || grant.approverIdentity).toLowerCase();
+    const normalizedKey = identity ? identity.publicKeyPem.replace(/\s+/g, "") : "";
+
+    // Deduplicate: multiple signatures from the same key, owner/principal, or public key count once
+    if (
+      validKeyIds.has(grant.approverKeyId) ||
+      validPrincipals.has(principal) ||
+      (normalizedKey && validPublicKeys.has(normalizedKey))
+    ) {
       continue;
     }
 
     validKeyIds.add(grant.approverKeyId);
+    validPrincipals.add(principal);
+    if (normalizedKey) {
+      validPublicKeys.add(normalizedKey);
+    }
     validApproverIdentities.add(grant.approverIdentity);
     expectedPreviousDigest = canonicalGrantDigest(grant);
   }
 
-  const distinctCount = validKeyIds.size;
+  const distinctCount = validPrincipals.size;
   if (distinctCount < threshold) {
     reasons.push(
       `Insufficient approved signatures: received ${distinctCount} valid distinct signatures, required threshold is ${threshold}`

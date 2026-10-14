@@ -195,4 +195,66 @@ describe("enforcement commands", () => {
       process.chdir(originalCwd);
     }
   });
+
+  it("rejects legacy unauthenticated grants when requireSignedApprovals is true", async () => {
+    const originalCwd = process.cwd();
+    process.chdir(repo.path);
+    try {
+      const fs = await import("node:fs/promises");
+      const path = await import("node:path");
+      const configPath = path.join(repo.path, ".safe-change.json");
+      const config = JSON.parse(await fs.readFile(configPath, "utf-8"));
+      config.enforcementPolicy.approvals.requireSignedApprovals = true;
+      await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+
+      stdout = "";
+      expect(
+        await runApproval({
+          action: "request",
+          values: [
+            "release:publish",
+            "release/artifact.tgz",
+            "codex",
+            "session-release",
+            "600",
+            "Publish",
+            "verified",
+            "artifact",
+          ],
+          format: "json",
+        })
+      ).toBe(ExitCodes.OK);
+      const id = JSON.parse(stdout).id as string;
+
+      for (const approver of ["release-owner", "security-owner"]) {
+        stdout = "";
+        await runApproval({
+          action: "grant",
+          values: [id, approver],
+          format: "json",
+        });
+      }
+
+      stdout = "";
+      expect(
+        await runAuthorize({
+          capability: "release:publish",
+          resource: "release/artifact.tgz",
+          agentName: "codex",
+          sessionId: "session-release",
+          approvalRequestId: id,
+          format: "json",
+        })
+      ).toBe(ExitCodes.OWNERSHIP_CONFLICT);
+      const decision = JSON.parse(stdout);
+      expect(decision.decision).toBe("require-approval");
+      expect(
+        decision.reasons.some((r: string) =>
+          r.includes("cryptographically signed approval grants")
+        )
+      ).toBe(true);
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });

@@ -41,8 +41,20 @@ export async function executeCheck(
   check: CheckDefinition,
   options: ExecutorOptions
 ): Promise<CheckResult> {
+  let osHandlesNetworkDeny = false;
+  if (options.sandboxPolicy?.networkPolicy === "deny") {
+    try {
+      const caps = await getSandboxProvider().detectCapabilities();
+      osHandlesNetworkDeny = Boolean(caps.networkIsolation);
+    } catch {
+      osHandlesNetworkDeny = false;
+    }
+  }
+
   const sandboxDecision = options.sandboxPolicy
-    ? evaluateCommandSandbox(check, options.sandboxPolicy)
+    ? evaluateCommandSandbox(check, options.sandboxPolicy, process.env, {
+        osProviderHandlesNetworkDeny: osHandlesNetworkDeny,
+      })
     : null;
   if (sandboxDecision && !sandboxDecision.allowed) {
     return {

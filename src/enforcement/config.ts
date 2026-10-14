@@ -157,9 +157,16 @@ function validateApprovals(value: unknown): ApprovalPolicy {
       "enforcementPolicy.approvals.prohibitSelfApproval must be a boolean.",
     );
   }
+  const requireSignedApprovals = data["requireSignedApprovals"] ?? false;
+  if (typeof requireSignedApprovals !== "boolean") {
+    throw new Error(
+      "enforcementPolicy.approvals.requireSignedApprovals must be a boolean.",
+    );
+  }
   return {
     thresholds,
     prohibitSelfApproval,
+    requireSignedApprovals,
     maximumExceptionTtlSeconds: positiveInteger(
       data["maximumExceptionTtlSeconds"],
       "enforcementPolicy.approvals.maximumExceptionTtlSeconds",
