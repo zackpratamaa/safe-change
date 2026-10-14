@@ -46,10 +46,11 @@ const TOOLS = [
   {
     name: "safe_change_check",
     description:
-      "Compare the current repository state and verification checks against the saved baseline. Returns regression status. Exit code 1 means regression detected.",
+      "Compare against baseline. Set strict=true for a verified-only gate; otherwise exit 0 means no new regression, not necessarily verified.",
     inputSchema: {
       type: "object" as const,
       properties: {
+        strict: { type: "boolean", description: "Require verified status; non-verified results return exit 1 in the report." },
         cwd: {
           type: "string",
           description:
@@ -257,6 +258,7 @@ export function createServer(): Server {
     }
 
     const cliArgs = [...commandParts, "--json"];
+    if (name === "safe_change_check" && args["strict"] === true) cliArgs.push("--strict");
 
     if (name === "safe_change_save" && typeof args["description"] === "string") {
       cliArgs.push(args["description"]);

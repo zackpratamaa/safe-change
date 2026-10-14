@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import type {
   Baseline,
@@ -7,6 +8,7 @@ import type {
   SafeChangeConfig,
   VerificationState,
   WorkspaceFingerprint,
+  VerificationBinding,
 } from "../types/index.js";
 import { loadBaseline } from "../baseline/manager.js";
 import { compareFiles } from "../comparator/engine.js";
@@ -14,12 +16,14 @@ import { getDiffText, getFileEntries } from "../git/inspector.js";
 import { captureWorkspaceFingerprint } from "./fingerprint.js";
 import { appendAuditEvent } from "./audit-log.js";
 import { sha256, stableDigest } from "./hash.js";
+import { bindingsMatch, captureVerificationBinding } from "./verification-binding.js";
 
 const STATE_DIR = ".safe-change";
 const REPORT_FILE = "last-verification-summary.json";
 const SESSION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{2,127}$/;
 
 export interface VerificationSummary {
+  readonly verificationBinding?: VerificationBinding;
   readonly schemaVersion: 1;
   readonly generatedAt: string;
   readonly state: VerificationState;
@@ -49,6 +53,7 @@ export async function persistVerificationSummary(
   report: CheckReport
 ): Promise<VerificationSummary> {
   const summary: VerificationSummary = {
+    verificationBinding: report.verificationBinding,
     schemaVersion: 1,
     generatedAt: report.generatedAt,
     state: report.verification?.state ?? "not-verified",
@@ -66,11 +71,14 @@ export async function persistVerificationSummary(
   };
   const stateDir = join(repoRoot, STATE_DIR);
   await mkdir(stateDir, { recursive: true });
-  await writeFile(
-    join(stateDir, REPORT_FILE),
-    `${JSON.stringify(summary, null, 2)}\n`,
-    { encoding: "utf8", mode: 0o600 }
-  );
+  const destination = join(stateDir, REPORT_FILE);
+  const temporary = `${destination}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(summary, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    await rename(temporary, destination);
+  } finally {
+    await unlink(temporary).catch(() => undefined);
+  }
   return summary;
 }
 
@@ -78,9 +86,14 @@ async function readVerificationSummary(
   repoRoot: string
 ): Promise<VerificationSummary | null> {
   try {
-    return JSON.parse(
+    const value = JSON.parse(
       await readFile(join(repoRoot, STATE_DIR, REPORT_FILE), "utf8")
     ) as VerificationSummary;
+    if (!value || value.schemaVersion !== 1 ||
+      !["verified", "failed", "not-verified", "unavailable"].includes(value.state)) {
+      return null;
+    }
+    return value;
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;
@@ -135,6 +148,18 @@ export async function createEvidenceBundle(
     readVerificationSummary(repoRoot),
   ]);
   const changes = compareFiles(baseline.files, currentFiles);
+  // The environment fingerprint above may carry an evidence agent label.
+  // Verification bindings use the actual check environment (without a label).
+  const currentBinding = await captureVerificationBinding(repoRoot, config, baseline, currentFiles);
+  const freshness = !verification ? "missing" :
+    bindingsMatch(verification.verificationBinding, currentBinding) ? "fresh" : "stale";
+  const evidenceVerification = freshness === "fresh" ? verification : {
+    ...(verification ?? { schemaVersion: 1 }),
+    state: "not-verified" as const,
+    reason: freshness === "missing"
+      ? "No persisted verification summary is available."
+      : "Verification evidence is stale or unbound; rerun check for the current source, baseline, and environment.",
+  };
   const directory = join(repoRoot, STATE_DIR, "evidence", sessionId);
   await mkdir(directory, { recursive: true, mode: 0o700 });
 
@@ -152,11 +177,7 @@ export async function createEvidenceBundle(
     writeJson(
       directory,
       "verification-report.json",
-      verification ?? {
-        schemaVersion: 1,
-        state: "not-verified",
-        reason: "No persisted verification summary is available.",
-      }
+      evidenceVerification
     ),
     writeJson(directory, "environment-fingerprint.json", fingerprint),
   ]);
@@ -171,9 +192,10 @@ export async function createEvidenceBundle(
     createdAt: new Date().toISOString(),
     repositoryHash:
       fingerprint.git.remoteHash ?? stableDigest({ repository: "local" }),
-    baselineId: baseline.git.headCommit ?? baseline.createdAt,
+    baselineId: currentBinding.baselineDigest,
     workspaceFingerprint: fingerprint.digest,
-    verificationState: verification?.state ?? "not-verified",
+    verificationState: evidenceVerification?.state ?? "not-verified",
+    verificationFreshness: freshness,
     files: components.map((component) => component.filename).sort(),
     evidenceDigest,
   };
