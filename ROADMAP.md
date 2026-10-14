@@ -17,8 +17,9 @@ Status labels: Done | In Progress | Planned
 ## Quality increment (Unreleased, partial)
 
 - Implemented: limited original AST/UI heuristics; current-evidence required-check gate; conservative SARIF and Playwright report-only assessment; inert scanner templates and setup-required profiles.
-- Not completed: specialized cross-language maintainability analysis, full UI/UX contract parser, live browser/axe certification, installed/live-tested external scanners, project-specific ORT/ScanCode license policy, Cosign identity/attestation policy and Scorecard/CodeQL findings policy.
-- No automatic IDE or CI activation. [Usage and boundaries](docs/quality-gates.md); [pinned audit](docs/quality-reference-audit.md).
+- Not completed: specialized cross-language maintainability analysis, full UI/UX contract parser, live browser/axe certification, cross-platform certification of external scanners, project-specific ORT/ScanCode license policy, Cosign identity/attestation policy and Scorecard/CodeQL findings policy.
+- Preview evidence: pinned Linux scanner fixtures, clean package/stdio MCP/hook smoke, Chromium desktop/mobile checks and scoped axe results. Not a live IDE consent certification.
+- No automatic IDE activation in consumer projects. [Usage and boundaries](docs/quality-gates.md); [pinned audit](docs/quality-reference-audit.md).
 
 ## v0.1.0 -- Core CLI (Done)
 

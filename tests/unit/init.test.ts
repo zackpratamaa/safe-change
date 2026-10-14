@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile, readFile, mkdir, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -137,4 +137,17 @@ describe("init command", () => {
     const code = await runInit({ format: "json", overwrite: true });
     expect(code).toBe(ExitCodes.OK);
   });
+  it("refuses non-regular gitignore before modifying configuration", async () => {
+    await mkdir(join(tempDir, ".gitignore"));process.chdir(tempDir);
+    expect(await runInit({format:"json",updateGitignore:true})).toBe(ExitCodes.CONFIG_ERROR);
+    await expect(readFile(join(tempDir,".safe-change.json"))).rejects.toThrow();
+  });
+  it("refuses linked overwrite targets and preserves their contents", async () => {
+    if(process.platform === "win32") return; // File symlinks require privileges; junctions are covered elsewhere.
+    await writeFile(join(tempDir,"outside.json"),"original");
+    await symlink(join(tempDir,"outside.json"),join(tempDir,".safe-change.json"));process.chdir(tempDir);
+    expect(await runInit({format:"json",overwrite:true})).toBe(ExitCodes.CONFIG_ERROR);
+    expect(await readFile(join(tempDir,"outside.json"),"utf8")).toBe("original");
+  });
+
 });

@@ -58,7 +58,7 @@ Before executing:
 5. Protect rules, policy, wrappers and UX tests as verification inputs. Templates stored under `security/` must be included in `protectedVerificationPaths`, for example `security/**` and `quality-policy.json`. A normal source hash detects staleness; protected paths additionally prevent changing the oracle without review.
 6. Configure these checks before saving the accepted pre-change baseline. Preserve old behavior checks; do not manufacture a passing baseline after the change.
 
-The templates were inspected against the pinned source interfaces; **external scanners were not installed or live-executed in this increment**. Missing/configured-out capabilities are not PASS. Binary/platform/version differences still require validation.
+The initial quality increment inspected source interfaces only. Preview validation now includes live Linux fixtures for Gitleaks 8.30.1, Semgrep 1.168.0, Trivy 0.75.0 and OSV-Scanner 2.7.0, plus Playwright 1.64.0 Chromium tests and real JSON report assessment. See [the exact evidence and limits](preview-validation.md). These tools are not automatically installed in consumer projects. Missing/configured-out capabilities are not PASS; other versions/platforms and the setup-required policy integrations still require validation.
 
 ### Tool boundaries
 

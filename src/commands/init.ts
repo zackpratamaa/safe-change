@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { lstat, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { CheckDefinition, OutputFormat, SafeChangeConfig } from "../types/index.js";
@@ -120,6 +120,19 @@ export async function runInit(options: InitOptions = {}): Promise<number> {
   }
 
   const configPath = join(repoRoot, ".safe-change.json");
+  // Refuse known links/non-files before any overwrite; these checks are not race-proof confinement.
+  for (const name of [".safe-change.json", ...(options.updateGitignore ? [".gitignore"] : [])]) {
+    try {
+      const info = await lstat(join(repoRoot, name));
+      if (!info.isFile() || info.isSymbolicLink()) throw new Error("Refusing non-regular or linked init input");
+      if (name === ".gitignore") await readFile(join(repoRoot, name), "utf8");
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        process.stderr.write(renderError(format, "Cannot safely access init configuration or gitignore; no overwrite attempted.", ExitCodes.CONFIG_ERROR));
+        return ExitCodes.CONFIG_ERROR;
+      }
+    }
+  }
   if (existsSync(configPath) && !options.overwrite) {
     const msg = "Configuration file .safe-change.json already exists. Use --overwrite to regenerate.";
     process.stderr.write(renderError(format, msg, ExitCodes.COLLISION_DETECTED));
@@ -150,7 +163,10 @@ export async function runInit(options: InitOptions = {}): Promise<number> {
         gitignoreStatus = "already-ignored";
       }
     } catch {
-      // Best-effort read
+      if (options.updateGitignore) {
+        process.stderr.write(renderError(format, "Cannot read existing gitignore; refusing to replace unknown content.", ExitCodes.CONFIG_ERROR));
+        return ExitCodes.CONFIG_ERROR;
+      }
     }
   }
 

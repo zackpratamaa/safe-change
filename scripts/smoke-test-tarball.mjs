@@ -1,112 +1,57 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
 
 async function main() {
-  const repoRoot = resolve(".");
-  const isWin = process.platform === "win32";
-  const tempProject = await mkdtemp(join(tmpdir(), "sc-tarball-smoke-"));
-
-  console.log(`Testing tarball installation in: ${tempProject}`);
-  let generatedTarball = null;
-
+  const repoRoot=resolve('.'), windows=process.platform==='win32';
+  const project=await mkdtemp(join(tmpdir(),'sc-clean-install-'));let tarball;
+  const records=[];
+  const assert=(ok,message)=>{if(!ok)throw new Error(message);records.push(message);};
+  const command=(bin,args,cwd=project)=>execFileSync(bin,args,{cwd,encoding:'utf8',timeout:180000,maxBuffer:4*1024*1024,shell:windows&&bin.endsWith('.cmd'),stdio:['ignore','pipe','pipe']});
   try {
-    // 0. Pack tarball
-    console.log("Packing tarball with npm pack...");
-    const packOutput = execFileSync(isWin ? "npm.cmd" : "npm", ["pack"], {
-      cwd: repoRoot,
-      encoding: "utf-8",
-      shell: isWin,
-    });
-    const tarballFileName = packOutput.trim().split(/\r?\n/).pop().trim();
-    const tarballPath = resolve(repoRoot, tarballFileName);
-    generatedTarball = tarballPath;
-
-    // 1. Initialize temporary package
-    await writeFile(
-      join(tempProject, "package.json"),
-      JSON.stringify({ name: "smoke-test-project", version: "1.0.0" })
-    );
-
-    // 2. Install packed tarball
-    console.log(`Installing tarball from ${tarballPath}...`);
-    execFileSync(isWin ? "npm.cmd" : "npm", ["install", tarballPath, "--omit=optional"], {
-      cwd: tempProject,
-      stdio: "inherit",
-      shell: isWin,
-    });
-
-    const binName = isWin ? "safe-change.cmd" : "safe-change";
-    const binPath = join(tempProject, "node_modules", ".bin", binName);
-
-    // 3. safe-change --version
-    console.log("Testing safe-change --version...");
-    const versionOutput = execFileSync(binPath, ["--version"], {
-      cwd: tempProject,
-      encoding: "utf-8",
-      shell: isWin,
-    });
-    const pkgJson = JSON.parse(await import("node:fs/promises").then((fs) => fs.readFile(join(repoRoot, "package.json"), "utf-8")));
-    if (!versionOutput.includes(pkgJson.version)) {
-      throw new Error(`Unexpected version: ${versionOutput}, expected ${pkgJson.version}`);
-    }
-
-    // 4. Initialize git repo in temp project
-    execFileSync("git", ["init"], { cwd: tempProject, stdio: "ignore" });
-    execFileSync("git", ["config", "user.name", "SmokeTest"], { cwd: tempProject, stdio: "ignore" });
-    execFileSync("git", ["config", "user.email", "smoke@test.local"], { cwd: tempProject, stdio: "ignore" });
-
-    // 5. safe-change init
-    console.log("Testing safe-change init...");
-    const initOutput = execFileSync(binPath, ["init"], {
-      cwd: tempProject,
-      encoding: "utf-8",
-      shell: isWin,
-    });
-    console.log(`Init output:\n${initOutput.trim()}`);
-
-    // Commit baseline file
-    await writeFile(join(tempProject, "hello.txt"), "world");
-    execFileSync("git", ["add", "."], { cwd: tempProject, stdio: "ignore" });
-    execFileSync("git", ["commit", "-m", "initial"], { cwd: tempProject, stdio: "ignore" });
-
-    // 6. safe-change save
-    console.log("Testing safe-change save...");
-    const saveOutput = execFileSync(binPath, ["save", "smoke baseline"], {
-      cwd: tempProject,
-      encoding: "utf-8",
-      shell: isWin,
-    });
-    console.log(`Save output:\n${saveOutput.trim()}`);
-
-    // 7. safe-change check
-    console.log("Testing safe-change check...");
-    const checkOutput = execFileSync(binPath, ["check"], {
-      cwd: tempProject,
-      encoding: "utf-8",
-      shell: isWin,
-    });
-    console.log(`Check output:\n${checkOutput.trim()}`);
-
-    console.log("ALL SMOKE TESTS PASSED SUCCESSFULLY!");
-  } finally {
+    const npm=windows?'npm.cmd':'npm';
+    const packed=JSON.parse(command(npm,['pack','--ignore-scripts','--json'],repoRoot))[0];tarball=join(repoRoot,packed.filename);
+    await writeFile(join(project,'package.json'),JSON.stringify({name:'sc-preview-fixture',version:'1.0.0',private:true}));
+    command(npm,['install',tarball,'--omit=optional','--ignore-scripts','--no-audit','--no-fund']);
+    const installed=join(project,'node_modules','safe-change');const cli=join(installed,'dist','cli.js');
+    const run=(...args)=>command(process.execPath,[cli,...args]);
+    const expectCode=(code,...args)=>{try{run(...args);assert(code===0,`${args.join(' ')} exit ${code}`);}catch(e){if(e.status!==code)throw e;records.push(`${args.join(' ')} exit ${code}`);return e.stdout?.toString();}};
+    const version=JSON.parse(await readFile(join(repoRoot,'package.json'),'utf8')).version;
+    assert(run('--version').includes(version),'installed CLI version matches tarball');
+    command('git',['init']);command('git',['config','user.name','SafeChangePreview']);command('git',['config','user.email','preview@example.invalid']);
+    await writeFile(join(project,'.gitignore'),'node_modules/\n.safe-change/\n');
+    run('init','--json');
+    await writeFile(join(project,'app.json'),'{"value":1}\n');
+    await writeFile(join(project,'check.mjs'),"import fs from 'node:fs';process.exit(JSON.parse(fs.readFileSync('app.json','utf8')).value===1?0:1);\n");
+    await writeFile(join(project,'.safe-change.json'),JSON.stringify({version:1,checks:[{name:'behavior',executable:process.execPath,args:['check.mjs'],timeout:30}]}));
+    await writeFile(join(project,'quality-policy.json'),JSON.stringify({version:1,requiredChecks:['behavior'],maxAgeSeconds:3600}));
+    await writeFile(join(project,'contract.json'),JSON.stringify({version:1,intent:'Preserve fixture behavior',allowedPaths:['app.json'],protectedPaths:['check.mjs'],requirements:[{id:'R1',description:'Existing behavior preserved',checks:['behavior']}],nonGoals:['No check rewrite']}));
+    command('git',['add','.']);command('git',['commit','-m','clean fixture']);
+    run('save','pre-change fixture','--json');assert(JSON.parse(run('check','--strict','--json')).verification.state==='verified','strict clean verification');
+    assert(JSON.parse(run('quality','gate','--file','quality-policy.json','--json')).status==='PASS','current quality gate');
+    run('session','start','preview-task','--file','contract.json','--json');
+    assert(JSON.parse(run('session','hook','preview-task','before-edit','--json')).hookSpecificOutput.permissionDecision==='ask','hook asks before a timing choice');
+    assert(JSON.parse(run('session','hook','preview-task','before-finish','--json')).decision==='block','hook blocks unresolved completion');
+    expectCode(3,'session','decide','preview-task');
+    await writeFile(join(project,'app.json'),'{"value":2}\n');
+    expectCode(1,'check','--strict','--json');expectCode(1,'quality','gate','--file','quality-policy.json','--json');
+    await writeFile(join(project,'outside-scope.txt'),'controlled scope violation');
+    assert(JSON.parse(run('session','hook','preview-task','before-edit','--json')).hookSpecificOutput.permissionDecision==='deny','hook denies observed scope violation');
+    const sdk=join(project,'node_modules','@modelcontextprotocol','sdk','dist','esm','client');
+    const {Client}=await import(pathToFileURL(join(sdk,'index.js')).href);
+    const {StdioClientTransport}=await import(pathToFileURL(join(sdk,'stdio.js')).href);
+    const client=new Client({name:'clean-package-preview-test',version:'1.0.0'},{capabilities:{}});
+    const transport=new StdioClientTransport({command:process.execPath,args:[cli,'mcp'],cwd:project,stderr:'pipe'});
     try {
-      await rm(tempProject, { recursive: true, force: true });
-    } catch {
-      // Best effort cleanup
-    }
-    if (generatedTarball) {
-      try {
-        await rm(generatedTarball, { force: true });
-      } catch {
-        // Best effort cleanup
-      }
-    }
-  }
+      await client.connect(transport);assert((await client.listTools()).tools.length===5,'packaged stdio MCP discovers five tools');
+      const result=await client.callTool({name:'safe_change_check',arguments:{cwd:project,strict:true}});
+      const text=result.content?.find(c=>c.type==='text')?.text;
+      assert(text&&JSON.parse(text).verification.state==='failed','packaged MCP reports controlled regression');
+    } finally {await client.close();await transport.close();}
+    console.log(JSON.stringify({status:'PASS',version,records,limits:['TypeScript fallback installation (--omit=optional); no native distribution certification','Hook protocol and actual stdio MCP, not a live IDE/agent consent test']}));
+    console.log('ALL SMOKE TESTS PASSED SUCCESSFULLY!');
+  } finally {await rm(project,{recursive:true,force:true});if(tarball)await rm(tarball,{force:true});}
 }
-
-main().catch((err) => {
-  console.error("SMOKE TEST FAILED:", err);
-  process.exit(1);
-});
+main().catch(error=>{console.error('SMOKE TEST FAILED:',error.message);process.exit(1);});

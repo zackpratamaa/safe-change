@@ -1,6 +1,6 @@
 # Quality reference audit (unreleased)
 
-All 13 requested repositories were shallow-cloned for read-only inspection. No installer, reference agent instruction, scanner binary, model, Git hook or remote rule bundle was executed. No source/assets/dependencies from these repositories are vendored in Safe-Change. The new implementation is original; repository ideas are references, not authority to overwrite project requirements. Safe-Change remains AGPL-3.0-only.
+All 13 requested repositories were shallow-cloned for read-only inspection. No upstream installer, reference agent instruction, model, Git hook or mutable remote instruction bundle was executed during the source audit. Subsequent pinned scanner/browser fixture execution is recorded separately in [preview validation](preview-validation.md). No source/assets/dependencies from these repositories are vendored in Safe-Change. The new implementation is original; repository ideas are references, not authority to overwrite project requirements. Safe-Change remains AGPL-3.0-only.
 
 Machine-readable identities: [quality-reference-snapshots.json](quality-reference-snapshots.json). Each reference is pinned to the inspected commit, not a mutable main branch. This pins research only; scanner executables/databases and project policies must be pinned separately. Stars were not used as quality evidence.
 
@@ -29,6 +29,6 @@ Machine-readable identities: [quality-reference-snapshots.json](quality-referenc
 
 ## Evidence and limits
 
-The audited source includes frontend rules/installer implementations, scanner CLI docs, Playwright JSON reporter types, ORT evaluator CLI behavior and license notices. This is a scoped interface/license inspection, not an exhaustive security audit of thirteen projects. New tests cover original heuristics, report parsing, bounded local files, named-check delivery policy and current-evidence drift. Scanner templates are not claims that all external tools are installed, live-tested, or enabled in this repository.
+The audited source includes frontend rules/installer implementations, scanner CLI docs, Playwright JSON reporter types, ORT evaluator CLI behavior and license notices. This is a scoped interface/license inspection, not an exhaustive security audit of thirteen projects. New tests cover original heuristics, report parsing, bounded local files, named-check delivery policy and current-evidence drift. Scanner templates are not claims that all external tools are enabled in consumer repositories; later [preview validation](preview-validation.md) records the exact live-tested subset and platforms.
 
 Do not copy implementation from a restricted reference without separate permission/license review. None of the scanners can prove every line was lawfully authored by a human, and this implementation makes no patentability claim.

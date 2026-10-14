@@ -19,7 +19,7 @@ export function renderDashboardHtml(): string {
 
       --text-main: #1d1d1f;
       --text-sub: #515154;
-      --text-caption: #86868b;
+      --text-caption: #626268;
       --divider: rgba(0, 0, 0, 0.06);
 
       --apple-blue: #0071e3;
@@ -57,6 +57,9 @@ export function renderDashboardHtml(): string {
       text-rendering: optimizeLegibility;
       letter-spacing: -0.01em;
     }
+
+    :focus-visible { outline: 2px solid var(--apple-blue); outline-offset: 3px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 
     .mono {
       font-family: var(--font-sf-mono);
@@ -951,7 +954,7 @@ export function renderDashboardHtml(): string {
         <div>
           <div class="brand-title">
             safe-change dashboard
-            <span class="badge badge-indigo" style="font-size: 10px; padding: 1px 7px;">v1.0.0 Enterprise</span>
+            <span class="badge badge-indigo" style="font-size: 10px; padding: 1px 7px;">v1.1.0-preview.1 Enterprise</span>
           </div>
           <div class="brand-desc">Autonomous verification telemetry, verifiable execution & cryptographic trust sentinel</div>
         </div>
@@ -1153,7 +1156,7 @@ export function renderDashboardHtml(): string {
             <button class="segment-btn" onclick="setFilter('regression')">Regressions</button>
           </div>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper" tabindex="0" role="region" aria-label="Scrollable verification records">
           <table id="log-table">
             <thead>
               <tr>
@@ -1359,7 +1362,7 @@ export function renderDashboardHtml(): string {
           </div>
           <span id="identity-count-badge" class="badge badge-info">0 Identities</span>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper" tabindex="0" role="region" aria-label="Scrollable verification records">
           <table>
             <thead>
               <tr>
@@ -1404,7 +1407,7 @@ export function renderDashboardHtml(): string {
           </div>
           <span id="audit-events-count-badge" class="badge badge-info mono">0 Events</span>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper" tabindex="0" role="region" aria-label="Scrollable verification records">
           <table>
             <thead>
               <tr>

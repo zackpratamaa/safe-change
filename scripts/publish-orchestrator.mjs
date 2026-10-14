@@ -11,6 +11,8 @@ import { resolve, join, basename } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { isValidSemver } from "./sync-version.mjs";
+
 export const ACTIVE_TARGETS = [
   "linux-x64-gnu",
   "win32-x64-msvc",
@@ -151,11 +153,18 @@ export async function determineReleaseMode(
   );
 }
 
-function publishTarball(tarballPath) {
+export function buildPublishArgs(tarballPath, version, isCI) {
+  if (!isValidSemver(version)) throw new Error("Invalid publication version");
+  const tag = version.split("+")[0].includes("-") ? "preview" : "latest";
+  const args = ["publish", tarballPath, "--access", "public", "--tag", tag];
+  if (isCI) args.push("--provenance");
+  return args;
+}
+
+function publishTarball(tarballPath, version) {
   const npmCmd = process.platform === "win32" ? "npm.cmd" : "npm";
   const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
-  const args = ["publish", tarballPath, "--access", "public"];
-  if (isCI) args.push("--provenance");
+  const args = buildPublishArgs(tarballPath, version, isCI);
   execFileSync(npmCmd, args, {
     stdio: "inherit",
     env: process.env,
@@ -207,7 +216,7 @@ export async function orchestrateNativePublish({
     }
     console.log(`Verified ${basename(tarball.path)} sha256=${tarball.sha256}`);
     if (!dryRun) {
-      publishTarball(tarball.path);
+      publishTarball(tarball.path, version);
       if (!(await pollPackageVisibility(pkgName, version, registry))) {
         throw new Error(`${pkgName}@${version} is not visible after publication.`);
       }
@@ -241,7 +250,7 @@ export async function orchestrateRootPublish({
   if (rootStatus.status !== "not_published") {
     throw new Error(`Cannot determine root package publication state.`);
   }
-  publishTarball(tarball.path);
+  publishTarball(tarball.path, version);
   if (!(await pollPackageVisibility(rootPkg.name, version, registry))) {
     throw new Error(`${rootPkg.name}@${version} is not visible after publication.`);
   }

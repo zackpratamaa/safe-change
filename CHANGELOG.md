@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0-preview.1] - 2026-10-14
+
+### Preview status
+- Experimental developer preview, not general availability or universal security/IDE certification.
+- Preserve backups and report both causes if installation and rollback fail; reject disappearance of known recovery backups.
+- Refuse known linked/non-regular init overwrite targets and preserve unreadable gitignore content.
+- Separate npm prerelease channel from latest; GitHub preview distribution does not publish npm packages.
+- Preview validation and source/license/tool boundaries are recorded in docs/preview-validation.md.
+
 ### Documentation
 - Align operational guides with strict verification, source/index coverage, branch fingerprints, actual replay/identity/attestation syntax, sandbox limits, and five MCP tools.
 - Mark seven research/design snapshots as historical; remove machine-specific links and unverified universal vendor configuration claims.
