@@ -67,7 +67,7 @@ describe('session CLI and real verifier integration', () => {
         expect((await run('session', 'hook', 'missing-task', 'before-edit')).code).toBe(2);
         await createSession(repo.path, 'cli-task', contract);
         const result = await run('session', 'hook', 'cli-task', 'before-edit');
-        expect(result.code).toBe(0);
+        expect(result.code, result.err).toBe(0);
         expect(JSON.parse(result.out)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'ask' } });
         expect(JSON.parse((await run('session', 'hook', 'cli-task', 'before-finish')).out)).toMatchObject({ decision: 'block' });
     });

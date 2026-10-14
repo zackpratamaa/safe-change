@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createTempRepo, type TempRepo } from '../helpers/temp-repo.js';
 import { createSession, loadSession, recordDecision, observeSession, sessionGate, monitorHealth, validateContract, watchSession } from '../../src/session/manager.js';
 let repo: TempRepo;
@@ -92,6 +93,17 @@ describe('task sessions and continuous observation', () => {
         await writeFile(join(repo.path, '.safe-change/sessions/task-1/state.lock'), 'busy');
         await expect(observeSession(repo.path, 'task-1')).rejects.toThrow();
         expect((await loadSession(repo.path, 'task-1')).choice).toBe('awaiting-user');
+    });
+    it('normalizes repository aliases before persisting session identity', async () => {
+        const aliasDirectory = await mkdtemp(join(tmpdir(), 'safe-change-alias-'));
+        try {
+            const alias = join(aliasDirectory, 'repo');
+            await symlink(repo.path, alias, process.platform === 'win32' ? 'junction' : 'dir');
+            await createSession(alias, 'alias-task', contract);
+            const state = await loadSession(repo.path, 'alias-task');
+            expect(state.repositoryRoot).toBe(await realpath(repo.path));
+            expect((await sessionGate(repo.path, 'alias-task', 'before-edit')).decision).toBe('ask');
+        } finally { await rm(aliasDirectory, { recursive: true, force: true }); }
     });
     it('rejects path traversal and invalid contract scope', async () => {
         await expect(createSession(repo.path, '../outside', contract)).rejects.toThrow();

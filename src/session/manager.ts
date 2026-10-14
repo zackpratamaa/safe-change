@@ -1,9 +1,9 @@
 /** Original Safe-Change implementation. Reference provenance: docs/reference-adaptation.md. */
-import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, realpath, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { FileEntry } from '../types/index.js';
-import { getFileEntries, getGitState } from '../git/inspector.js';
+import { getFileEntries, getGitState, getRepositoryRoot } from '../git/inspector.js';
 import { stableDigest } from '../integrity/hash.js';
 import { sourceDigest, bindingsMatch, captureVerificationBinding } from '../integrity/verification-binding.js';
 import { loadBaseline } from '../baseline/manager.js';
@@ -201,7 +201,11 @@ function validateState(raw: unknown, root: string, id: string): TaskSession {
         timestamp(monitor['heartbeatAt']);
     return raw as TaskSession;
 }
+async function canonicalRoot(root: string): Promise<string> {
+    return realpath(await getRepositoryRoot(root));
+}
 export async function loadSession(root: string, id: string): Promise<TaskSession> {
+    root = await canonicalRoot(root);
     const dir = await sessionDir(root, id);
     const path = join(dir, 'state.json');
     await regularFile(path);
@@ -241,6 +245,7 @@ async function persist(dir: string, state: TaskSession): Promise<void> {
     }
 }
 export async function createSession(root: string, id: string, contract: unknown): Promise<TaskSession> {
+    root = await canonicalRoot(root);
     const validated = validateContract(contract);
     return locked(root, id, async (dir) => {
         try {
@@ -261,6 +266,7 @@ export async function createSession(root: string, id: string, contract: unknown)
 }
 /** A workflow record, NOT an authenticated approval. Never expose this as an agent self-approval tool. */
 export async function recordDecision(root: string, id: string, choice: Exclude<VerificationChoice, 'awaiting-user'>): Promise<TaskSession> {
+    root = await canonicalRoot(root);
     if (!['now', 'before-finish', 'declined'].includes(choice))
         throw new Error('Invalid choice.');
     return locked(root, id, async (dir) => {
@@ -285,6 +291,7 @@ export function monitorHealth(state: {
     return Number.isFinite(age) && age >= 0 && age <= 15000 ? 'active' : 'stale';
 }
 export async function observeSession(root: string, id: string, monitor?: 'running' | 'stopped' | 'error'): Promise<TaskSession> {
+    root = await canonicalRoot(root);
     return locked(root, id, async (dir) => {
         const state = await loadSession(root, id);
         const current = await capture(root);
@@ -327,6 +334,7 @@ async function currentVerification(root: string, state: TaskSession): Promise<bo
     }
 }
 export async function sessionGate(root: string, id: string, point: GatePoint): Promise<GateResult> {
+    root = await canonicalRoot(root);
     if (!['before-edit', 'before-finish'].includes(point))
         throw new Error('Unknown gate point.');
     const state = await observeSession(root, id);
@@ -356,6 +364,7 @@ export async function sessionGate(root: string, id: string, point: GatePoint): P
 }
 /** Foreground observer: caller owns process lifetime. Never runs checks, edits code, or starts itself. */
 export async function watchSession(root: string, id: string, signal: AbortSignal, onTick: (state: TaskSession) => void = () => undefined): Promise<void> {
+    root = await canonicalRoot(root);
     const dir = await sessionDir(root, id);
     const path = join(dir, 'watch.lock');
     const lock = await open(path, 'wx', 0o600);
