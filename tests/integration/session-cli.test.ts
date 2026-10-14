@@ -12,7 +12,15 @@ function run(...args: string[]): Promise<{
     out: string;
     err: string;
 }> {
-    return new Promise(resolve => execFile(process.execPath, [cli, ...args], { cwd: repo.path, timeout: 15000 }, (error, out, err) => resolve({ code: typeof error?.code === 'number' ? error.code : error ? -1 : 0, out, err })));
+    // A configured fixture check may legitimately run for 60 seconds. The harness
+    // deadline must exceed that bound, including CLI startup on slower CI runners.
+    return new Promise((resolve, reject) => execFile(process.execPath, [cli, ...args], { cwd: repo.path, timeout: 90000 }, (error, out, err) => {
+        if (error && typeof error.code !== 'number') {
+            reject(new Error(`CLI subprocess failed: code=${error.code}, signal=${error.signal}, killed=${error.killed}; ${error.message}; ${err}`));
+            return;
+        }
+        resolve({ code: typeof error?.code === 'number' ? error.code : 0, out, err });
+    }));
 }
 beforeEach(async () => {
     repo = await createTempRepo();
@@ -55,7 +63,7 @@ describe('session CLI and real verifier integration', () => {
         expect((await run('save', 'late-baseline', '--json')).code).toBe(0);
         expect((await run('check', '--strict', '--json')).code).toBe(0);
         expect((await sessionGate(repo.path, 'cli-task', 'before-finish')).verification).toBe('not-verified');
-    });
+    }, 180000);
     it('requires every declared check mapping rather than trusting a green overall state', async () => {
         await createSession(repo.path, 'cli-task', { ...contract, requirements: [{ id: 'R2', description: 'Missing check', checks: ['nonexistent'] }] });
         await recordDecision(repo.path, 'cli-task', 'before-finish');
