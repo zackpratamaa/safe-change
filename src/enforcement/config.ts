@@ -157,8 +157,11 @@ function validateApprovals(value: unknown): ApprovalPolicy {
       "enforcementPolicy.approvals.prohibitSelfApproval must be a boolean.",
     );
   }
-  const requireSignedApprovals = data["requireSignedApprovals"] ?? false;
-  if (typeof requireSignedApprovals !== "boolean") {
+  const requireSignedApprovals = data["requireSignedApprovals"];
+  if (
+    requireSignedApprovals !== undefined &&
+    typeof requireSignedApprovals !== "boolean"
+  ) {
     throw new Error(
       "enforcementPolicy.approvals.requireSignedApprovals must be a boolean.",
     );
@@ -166,7 +169,7 @@ function validateApprovals(value: unknown): ApprovalPolicy {
   return {
     thresholds,
     prohibitSelfApproval,
-    requireSignedApprovals,
+    ...(requireSignedApprovals !== undefined ? { requireSignedApprovals } : {}),
     maximumExceptionTtlSeconds: positiveInteger(
       data["maximumExceptionTtlSeconds"],
       "enforcementPolicy.approvals.maximumExceptionTtlSeconds",

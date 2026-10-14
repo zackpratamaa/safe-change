@@ -62,8 +62,15 @@ export async function evaluateOperation(
       `No capability policy exists for agent "${request.agentName}".`,
     );
   } else {
-    if (agent.expiresAt && Date.parse(agent.expiresAt) <= Date.now()) {
-      reasons.push(`Capability grant for agent "${agent.agent}" has expired.`);
+    if (agent.expiresAt) {
+      const expiresAtMs = Date.parse(agent.expiresAt);
+      if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+        reasons.push(
+          !Number.isFinite(expiresAtMs)
+            ? `Capability grant for agent "${agent.agent}" has an invalid expiration timestamp.`
+            : `Capability grant for agent "${agent.agent}" has expired.`,
+        );
+      }
     }
     if (agent.deny.includes(request.capability)) {
       reasons.push(`Capability "${request.capability}" is explicitly denied.`);

@@ -116,8 +116,9 @@ export async function grantApproval(
   prohibitSelfApproval: boolean
 ): Promise<ApprovalRequest> {
   const request = await readApprovalRequest(repoRoot, id);
-  if (Date.parse(request.expiresAt) <= Date.now()) {
-    throw new Error("Approval request has expired.");
+  const expiresAtMs = Date.parse(request.expiresAt);
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+    throw new Error("Approval request has expired or has an invalid expiration timestamp.");
   }
   if (prohibitSelfApproval && request.requester === approver) {
     throw new Error("Requester cannot approve their own operation.");
@@ -165,8 +166,9 @@ export async function appendSignedApprovalGrant(
   grant: SignedApprovalGrant
 ): Promise<ApprovalRequest> {
   const request = await readApprovalRequest(repoRoot, id);
-  if (Date.parse(request.expiresAt) <= Date.now()) {
-    throw new Error("Approval request has expired.");
+  const expiresAtMs = Date.parse(request.expiresAt);
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) {
+    throw new Error("Approval request has expired or has an invalid expiration timestamp.");
   }
   if (
     grant.requestId !== request.id ||

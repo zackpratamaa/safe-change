@@ -90,6 +90,7 @@
         "policy:modify": 2
       },
       "prohibitSelfApproval": true,
+      "requireSignedApprovals": true,
       "maximumExceptionTtlSeconds": 3600
     }
   }

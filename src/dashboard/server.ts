@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { readFile } from "node:fs/promises";
@@ -39,11 +40,12 @@ export async function createDashboardServer(
     }
 
     if (url.pathname === "/") {
-      const html = renderDashboardHtml();
+      const nonce = randomBytes(16).toString("base64");
+      const html = renderDashboardHtml(nonce);
       res.writeHead(200, {
         "Content-Type": "text/html; charset=utf-8",
         "Content-Length": Buffer.byteLength(html),
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+        "Content-Security-Policy": `default-src 'self'; script-src 'self' 'nonce-${nonce}'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none';`,
         "X-Content-Type-Options": "nosniff",
         "X-Frame-Options": "DENY",
       });

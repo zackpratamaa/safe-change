@@ -4,25 +4,37 @@
     {
       "name": "build",
       "executable": "npm",
-      "args": ["run", "build"],
+      "args": [
+        "run",
+        "build"
+      ],
       "timeout": 60
     },
     {
       "name": "test",
       "executable": "npx",
-      "args": ["vitest", "run"],
+      "args": [
+        "vitest",
+        "run"
+      ],
       "timeout": 120
     },
     {
       "name": "coverage",
       "executable": "npm",
-      "args": ["run", "test:coverage"],
+      "args": [
+        "run",
+        "test:coverage"
+      ],
       "timeout": 180
     },
     {
       "name": "dependency-audit",
       "executable": "npm",
-      "args": ["audit", "--audit-level=high"],
+      "args": [
+        "audit",
+        "--audit-level=high"
+      ],
       "timeout": 120
     }
   ],
@@ -63,13 +75,21 @@
           "release:publish",
           "policy:modify"
         ],
-        "deny": ["secret:read"],
-        "resourcePatterns": ["**"],
+        "deny": [
+          "secret:read"
+        ],
+        "resourcePatterns": [
+          "**"
+        ],
         "expiresAt": null
       }
     ],
     "commandSandbox": {
-      "allowedExecutables": ["node", "npm", "npx"],
+      "allowedExecutables": [
+        "node",
+        "npm",
+        "npx"
+      ],
       "deniedArguments": [
         "--force",
         "--force-with-lease",
@@ -104,7 +124,15 @@
         "policy:modify": 2
       },
       "prohibitSelfApproval": true,
+      "requireSignedApprovals": true,
       "maximumExceptionTtlSeconds": 3600
     }
+  },
+  "policySignature": {
+    "algorithm": "ed25519",
+    "keyId": "safe-change-core-lead",
+    "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAeo7qL4ylxDA3RTofMSM/SssK1B4DzWL2/AKM8T67CPE=\n-----END PUBLIC KEY-----\n",
+    "policyDigest": "sha256:440f205781504acf1f14aee16b2457cdfaf88ff399fac96e4548a39dfb779bca",
+    "signatureBase64": "Gw4uFN9ucAnvGO7DBGwM5y4f8xN//LwZZGIYD4EJ17GvjVVL+7++zzhTukXIAk6JdF5Enrx/BC/vwHKj6i4XCg=="
   }
 }

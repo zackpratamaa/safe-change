@@ -1,4 +1,5 @@
-export function renderDashboardHtml(): string {
+export function renderDashboardHtml(nonce?: string): string {
+  const nonceAttr = nonce ? ` nonce="${nonce.replace(/"/g, '&quot;')}"` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1061,28 +1062,28 @@ export function renderDashboardHtml(): string {
     </div>
 
     <!-- Apple Liquid Glass Segmented Navigation Tab Bar -->
-    <div class="nav-tabs-wrapper liquid-glass">
-      <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">
+    <div class="nav-tabs-wrapper liquid-glass" id="nav-tabs">
+      <button class="tab-btn active" data-tab="overview">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Overview & Baseline
       </button>
-      <button class="tab-btn" data-tab="risk" onclick="switchTab('risk')">
+      <button class="tab-btn" data-tab="risk">
         <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         Enterprise Risk & Budget
       </button>
-      <button class="tab-btn" data-tab="semantic" onclick="switchTab('semantic')">
+      <button class="tab-btn" data-tab="semantic">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
         AST Semantic Security
       </button>
-      <button class="tab-btn" data-tab="verifiable" onclick="switchTab('verifiable')">
+      <button class="tab-btn" data-tab="verifiable">
         <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/></svg>
         Verifiable Replay & Attestations
       </button>
-      <button class="tab-btn" data-tab="identity" onclick="switchTab('identity')">
+      <button class="tab-btn" data-tab="identity">
         <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Identity & Trust Registry
       </button>
-      <button class="tab-btn" data-tab="audit" onclick="switchTab('audit')">
+      <button class="tab-btn" data-tab="audit">
         <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         Tamper-Evident Audit Chain
       </button>
@@ -1130,8 +1131,8 @@ export function renderDashboardHtml(): string {
           <div class="timeline-indicators" id="timeline-metrics-bar">
             <span id="timeline-stats" class="badge badge-info mono">0 runs tracked</span>
             <div class="segmented-control">
-              <button class="segment-btn" onclick="scrollTimeline('start')">Earliest</button>
-              <button class="segment-btn" onclick="scrollTimeline('end')">Latest</button>
+              <button class="segment-btn" data-scroll="start">Earliest</button>
+              <button class="segment-btn" data-scroll="end">Latest</button>
             </div>
           </div>
         </div>
@@ -1150,10 +1151,10 @@ export function renderDashboardHtml(): string {
             Panel 2 &mdash; Log History
             <span class="panel-tag">Audit Trail</span>
           </div>
-          <div class="segmented-control">
-            <button class="segment-btn active" onclick="setFilter('all')">All</button>
-            <button class="segment-btn" onclick="setFilter('clean')">Clean</button>
-            <button class="segment-btn" onclick="setFilter('regression')">Regressions</button>
+          <div class="segmented-control" id="log-filter-control">
+            <button class="segment-btn active" data-filter="all">All</button>
+            <button class="segment-btn" data-filter="clean">Clean</button>
+            <button class="segment-btn" data-filter="regression">Regressions</button>
           </div>
         </div>
         <div class="table-wrapper" tabindex="0" role="region" aria-label="Scrollable verification records">
@@ -1428,7 +1429,7 @@ export function renderDashboardHtml(): string {
     </div>
   </div>
 
-  <script>
+  <script${nonceAttr}>
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
       return String(str)
@@ -1638,23 +1639,28 @@ export function renderDashboardHtml(): string {
       const checks = status.checks || [];
       const passedCount = checks.filter(c => c.passed).length;
 
+      const createdAt = escapeHtml(status.createdAt || 'n/a');
+      const description = escapeHtml(status.description || '(no description)');
+      const fileCount = escapeHtml(status.fileCount ?? 0);
+      const commit = escapeHtml(status.git && status.git.headCommit ? String(status.git.headCommit).slice(0, 10) : 'n/a');
+
       container.innerHTML = \`
         <div class="meta-list">
           <div class="meta-row">
             <span class="meta-k">Recorded At</span>
-            <span class="meta-v mono">\${status.createdAt}</span>
+            <span class="meta-v mono">\${createdAt}</span>
           </div>
           <div class="meta-row">
             <span class="meta-k">Description</span>
-            <span class="meta-v">\${status.description || '(no description)'}</span>
+            <span class="meta-v">\${description}</span>
           </div>
           <div class="meta-row">
             <span class="meta-k">Monitored Files</span>
-            <span class="meta-v mono">\${status.fileCount} files</span>
+            <span class="meta-v mono">\${fileCount} files</span>
           </div>
           <div class="meta-row">
             <span class="meta-k">Git Commit</span>
-            <span class="meta-v mono">\${status.git && status.git.headCommit ? status.git.headCommit.slice(0, 10) : 'n/a'}</span>
+            <span class="meta-v mono">\${commit}</span>
           </div>
           <div class="meta-row">
             <span class="meta-k">Verification Rate</span>
@@ -1665,11 +1671,11 @@ export function renderDashboardHtml(): string {
           \${checks.map(c => \`
             <div class="check-pill">
               <div>
-                <span class="check-name mono">\${c.name}</span>
-                <span class="check-ms mono">\${c.durationMs ? c.durationMs + 'ms' : ''}</span>
+                <span class="check-name mono">\${escapeHtml(c && c.name ? c.name : 'unnamed')}</span>
+                <span class="check-ms mono">\${c && c.durationMs !== undefined ? escapeHtml(c.durationMs) + 'ms' : ''}</span>
               </div>
-              <span class="badge \${c.passed ? 'badge-clean' : 'badge-regression'}">
-                \${c.passed ? 'PASSED' : 'FAILED'}
+              <span class="badge \${c && c.passed ? 'badge-clean' : 'badge-regression'}">
+                \${c && c.passed ? 'PASSED' : 'FAILED'}
               </span>
             </div>
           \`).join('')}
@@ -1705,23 +1711,26 @@ export function renderDashboardHtml(): string {
         \${regCount > 0 ? \`<span class="badge badge-regression mono">\${regCount} regression\${regCount > 1 ? 's' : ''}</span>\` : ''}
         <span class="badge mono" style="background: rgba(0,0,0,0.04); color: var(--text-sub);">\${stability}% stability</span>
         <div class="segmented-control" style="margin-left: 6px;">
-          <button class="segment-btn" onclick="scrollTimeline('start')">Earliest</button>
-          <button class="segment-btn" onclick="scrollTimeline('end')">Latest</button>
+          <button class="segment-btn" data-scroll="start">Earliest</button>
+          <button class="segment-btn" data-scroll="end">Latest</button>
         </div>
       \`;
 
       let html = '';
       entries.forEach((e, idx) => {
         const num = idx + 1;
-        const isReg = e.regressionDetected;
+        const isReg = Boolean(e.regressionDetected);
         const isSelected = selectedTimelineId === e.id;
         const cardCls = isReg ? 'card-regression' : 'card-clean';
-        const shortId = e.id.slice(0, 8);
-        const dateStr = new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const rawId = String(e.id || '');
+        const shortId = escapeHtml(rawId.slice(0, 8));
+        const escapedId = escapeHtml(rawId);
+        const dateStr = escapeHtml(new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        const description = escapeHtml(e.description || '(no description)');
 
         const fs = e.fileSummary || { added: 0, modified: 0, deleted: 0 };
-        const checks = e.checkResults || [];
-        const passedChecks = checks.filter(c => c.result === 'pass-pass' || c.result === 'fail-pass').length;
+        const checks = Array.isArray(e.checkResults) ? e.checkResults : [];
+        const passedChecks = checks.filter(c => c && (c.result === 'pass-pass' || c.result === 'fail-pass')).length;
         const checksSummary = checks.length > 0 ? \`\${passedChecks}/\${checks.length} checks\` : 'No checks';
 
         const triggerPill = e.trigger === 'mcp'
@@ -1741,7 +1750,7 @@ export function renderDashboardHtml(): string {
         }
 
         html += \`
-          <div class="timeline-node-card \${cardCls} \${isSelected ? 'selected' : ''}" onclick="selectTimelineRun('\${e.id}')">
+          <div class="timeline-node-card \${cardCls} \${isSelected ? 'selected' : ''}" data-run-id="\${escapedId}">
             <div class="timeline-card-top">
               <span class="timeline-run-badge mono">RUN #\${num}</span>
               <div style="display: flex; gap: 4px; align-items: center;">
@@ -1750,7 +1759,7 @@ export function renderDashboardHtml(): string {
               </div>
             </div>
 
-            <div class="timeline-card-desc">\${e.description || '(no description)'}</div>
+            <div class="timeline-card-desc">\${description}</div>
 
             <div class="timeline-card-metrics">
               <span class="mono" style="color: var(--apple-blue); font-weight: 600;">#\${shortId}</span>
@@ -1762,11 +1771,11 @@ export function renderDashboardHtml(): string {
 
             <div class="timeline-card-footer">
               <div class="diff-pill mono">
-                <span class="diff-add">+\${fs.added}</span>
-                <span class="diff-mod">~\${fs.modified}</span>
-                <span class="diff-del">-\${fs.deleted}</span>
+                <span class="diff-add">+\${escapeHtml(fs.added)}</span>
+                <span class="diff-mod">~\${escapeHtml(fs.modified)}</span>
+                <span class="diff-del">-\${escapeHtml(fs.deleted)}</span>
               </div>
-              <span class="mono" style="color: var(--text-caption); font-size: 11px;">\${checksSummary}</span>
+              <span class="mono" style="color: var(--text-caption); font-size: 11px;">\${escapeHtml(checksSummary)}</span>
             </div>
           </div>
         \`;
@@ -1778,38 +1787,42 @@ export function renderDashboardHtml(): string {
         const selectedEntry = entries.find(e => e.id === selectedTimelineId);
         if (selectedEntry) {
           const runNum = entries.indexOf(selectedEntry) + 1;
-          const checks = selectedEntry.checkResults || [];
-          const isReg = selectedEntry.regressionDetected;
+          const checks = Array.isArray(selectedEntry.checkResults) ? selectedEntry.checkResults : [];
+          const isReg = Boolean(selectedEntry.regressionDetected);
+          const selectedDesc = escapeHtml(selectedEntry.description || '(none)');
+          const selectedId = escapeHtml(selectedEntry.id || '');
+          const selectedTime = escapeHtml(selectedEntry.timestamp || '');
+          const selectedTrigger = escapeHtml(String(selectedEntry.trigger || '').toUpperCase());
 
           inspector.style.display = 'flex';
           inspector.innerHTML = \`
             <div class="inspector-head">
               <div class="inspector-title">
                 <span class="mono" style="font-weight: 700; color: var(--apple-blue);">RUN #\${runNum} INSPECTOR</span>
-                <span class="mono" style="color: var(--text-caption); font-size: 12px;">ID: \${selectedEntry.id}</span>
+                <span class="mono" style="color: var(--text-caption); font-size: 12px;">ID: \${selectedId}</span>
                 <span class="badge \${isReg ? 'badge-regression' : 'badge-clean'}">\${isReg ? 'REGRESSION DETECTED' : 'CLEAN'}</span>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button class="segment-btn active" onclick="focusAuditRun('\${selectedEntry.id}')">View in Audit Table</button>
-                <button class="segment-btn" onclick="selectTimelineRun('\${selectedEntry.id}')">Close</button>
+                <button class="segment-btn active" data-action="focus-audit" data-run-id="\${selectedId}">View in Audit Table</button>
+                <button class="segment-btn" data-action="close-inspector">Close</button>
               </div>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
               <div>
                 <span style="color: var(--text-caption); font-size: 11px;">Description: </span>
-                <span style="font-weight: 600; color: var(--text-main);">\${selectedEntry.description || '(none)'}</span>
+                <span style="font-weight: 600; color: var(--text-main);">\${selectedDesc}</span>
               </div>
               <div class="mono" style="font-size: 11px; color: var(--text-caption);">
-                Timestamp: \${selectedEntry.timestamp} | Trigger: \${selectedEntry.trigger.toUpperCase()}
+                Timestamp: \${selectedTime} | Trigger: \${selectedTrigger}
               </div>
             </div>
             <div class="inspector-checks">
               \${checks.length > 0 ? checks.map(c => {
-                const pass = c.result === 'pass-pass' || c.result === 'fail-pass';
+                const pass = c && (c.result === 'pass-pass' || c.result === 'fail-pass');
                 return \`
                   <div class="inspector-check-pill mono">
-                    <span style="font-weight: 600;">\${c.name}</span>
-                    <span class="badge \${pass ? 'badge-clean' : 'badge-regression'}" style="font-size: 10px;">\${c.result}</span>
+                    <span style="font-weight: 600;">\${escapeHtml(c?.name || 'unnamed')}</span>
+                    <span class="badge \${pass ? 'badge-clean' : 'badge-regression'}" style="font-size: 10px;">\${escapeHtml(c?.result || '')}</span>
                   </div>
                 \`;
               }).join('') : '<div class="empty-state" style="padding: 10px; width: 100%;">No checks run during this entry</div>'}
@@ -1863,24 +1876,30 @@ export function renderDashboardHtml(): string {
         const fs = e.fileSummary || { added: 0, modified: 0, deleted: 0 };
         const diffPill = \`
           <div class="diff-pill mono">
-            <span class="diff-add">+\${fs.added}</span>
-            <span class="diff-mod">~\${fs.modified}</span>
-            <span class="diff-del">-\${fs.deleted}</span>
+            <span class="diff-add">+\${escapeHtml(fs.added)}</span>
+            <span class="diff-mod">~\${escapeHtml(fs.modified)}</span>
+            <span class="diff-del">-\${escapeHtml(fs.deleted)}</span>
           </div>
         \`;
 
-        const checksList = (e.checkResults || []).map(c => {
-          const pass = c.result === 'pass-pass' || c.result === 'fail-pass';
+        const checksList = (Array.isArray(e.checkResults) ? e.checkResults : []).map(c => {
+          const pass = c && (c.result === 'pass-pass' || c.result === 'fail-pass');
           const color = pass ? 'var(--apple-green)' : 'var(--apple-red)';
-          return \`<span style="color: \${color}; font-size: 11px;" class="mono">\${c.name}</span>\`;
+          return \`<span style="color: \${color}; font-size: 11px;" class="mono">\${escapeHtml(c?.name || '')}</span>\`;
         }).join('<span style="color: var(--text-caption);">, </span>') || '<span style="color: var(--text-caption);">-</span>';
 
+        const rawId = String(e.id || '');
+        const shortId = escapeHtml(rawId.slice(0, 8));
+        const escapedId = escapeHtml(rawId);
+        const timestamp = escapeHtml(e.timestamp || '');
+        const description = escapeHtml(e.description || '(no description)');
+
         return \`
-          <tr class="\${rowCls}" data-id="\${e.id}">
-            <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${e.timestamp}</td>
-            <td><code class="mono" style="color: var(--apple-blue); font-weight: 600;">\${e.id.slice(0, 8)}</code></td>
+          <tr class="\${rowCls}" data-id="\${escapedId}">
+            <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${timestamp}</td>
+            <td><code class="mono" style="color: var(--apple-blue); font-weight: 600;">#\${shortId}</code></td>
             <td>\${triggerBadge}</td>
-            <td style="font-weight: 600; color: var(--text-main);">\${e.description || '(no description)'}</td>
+            <td style="font-weight: 600; color: var(--text-main);">\${description}</td>
             <td>\${diffPill}</td>
             <td>\${checksList}</td>
             <td>\${statusBadge}</td>
@@ -1901,7 +1920,7 @@ export function renderDashboardHtml(): string {
       if (status === 'invalid') {
         badge.className = 'badge badge-regression';
         badge.textContent = 'Invalid Config';
-        container.innerHTML = '<div class="empty-state" style="color: var(--apple-red);">Configuration error in rules.json: ' + (errorMsg || 'Invalid schema or syntax') + '</div>';
+        container.innerHTML = '<div class="empty-state" style="color: var(--apple-red);">Configuration error in rules.json: ' + escapeHtml(errorMsg || 'Invalid schema or syntax') + '</div>';
         return;
       }
 
@@ -2041,9 +2060,7 @@ export function renderDashboardHtml(): string {
           </div>
         \`;
       }
-    }
-
-    function renderVerifiable(ver) {
+    }    function renderVerifiable(ver) {
       if (!ver) return;
 
       // Semantic Report
@@ -2060,7 +2077,7 @@ export function renderDashboardHtml(): string {
             <div class="meta-list">
               <div class="meta-row">
                 <span class="meta-k">Evaluated Target</span>
-                <span class="meta-v mono">\${ver.semanticReport.target || 'Current Workspace'}</span>
+                <span class="meta-v mono">\${escapeHtml(ver.semanticReport.target || 'Current Workspace')}</span>
               </div>
               <div class="meta-row">
                 <span class="meta-k">Breaking Changes</span>
@@ -2086,8 +2103,9 @@ export function renderDashboardHtml(): string {
       if (attestList && attestations.length > 0) {
         attestList.innerHTML = attestations.map(a => {
           const s = a.summary || {};
-          const subject = (s.subject && s.subject[0]) ? s.subject[0].name : a.filename;
-          const digest = (s.subject && s.subject[0] && s.subject[0].digest) ? s.subject[0].digest.sha256 : '';
+          const subject = escapeHtml((s.subject && s.subject[0]) ? s.subject[0].name : a.filename);
+          const rawDigest = (s.subject && s.subject[0] && s.subject[0].digest) ? s.subject[0].digest.sha256 : '';
+          const digest = escapeHtml(rawDigest ? rawDigest.slice(0, 16) + '...' : a.filename);
           return \`
             <div class="signal-item">
               <div>
@@ -2096,7 +2114,7 @@ export function renderDashboardHtml(): string {
                   <span class="mono">\${subject}</span>
                 </div>
                 <div class="mono" style="font-size: 11px; color: var(--text-caption); margin-top: 4px;">
-                  Digest: \${digest ? digest.slice(0, 16) + '...' : a.filename}
+                  Digest: \${digest}
                 </div>
               </div>
               <span class="badge badge-info mono">VERIFIED</span>
@@ -2117,10 +2135,10 @@ export function renderDashboardHtml(): string {
             <div>
               <div style="font-weight: 600; color: var(--text-main); font-size: 12px; display: flex; align-items: center; gap: 6px;">
                 <span class="badge badge-purple mono">REPLAY</span>
-                <span class="mono">\${r.sessionId.slice(0, 16)}</span>
+                <span class="mono">\${escapeHtml(String(r.sessionId || '').slice(0, 16))}</span>
               </div>
               <div class="mono" style="font-size: 11px; color: var(--text-caption); margin-top: 4px;">
-                Manifest: \${r.manifestDigest ? r.manifestDigest.slice(0, 16) + '...' : 'none'}
+                Manifest: \${escapeHtml(r.manifestDigest ? String(r.manifestDigest).slice(0, 16) + '...' : 'none')}
               </div>
             </div>
             <span class="badge badge-clean mono">DETERMINISTIC</span>
@@ -2172,9 +2190,12 @@ export function renderDashboardHtml(): string {
       }
 
       tbody.innerHTML = events.map(ev => {
-        const prev = ev.previousHash || ev.prevHash || '00000000';
-        const curr = ev.hash || ev.currentHash || '--------';
-        const type = ev.type || ev.action || 'EVENT';
+        const prev = String(ev.previousHash || ev.prevHash || '00000000');
+        const curr = String(ev.hash || ev.currentHash || '--------');
+        const type = String(ev.type || ev.action || 'EVENT');
+        const linkBadge = audit.verified
+          ? '<span class="badge badge-clean">VALID LINK</span>'
+          : (audit.corrupted ? '<span class="badge badge-regression">CORRUPTED</span>' : '<span class="badge badge-regression">COMPROMISED</span>');
         return \`
           <tr>
             <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${escapeHtml(ev.timestamp || 'now')}</td>
@@ -2182,12 +2203,64 @@ export function renderDashboardHtml(): string {
             <td><strong style="color: var(--text-main);">\${escapeHtml(ev.actor || 'system')}</strong></td>
             <td><code class="hash-pill">\${escapeHtml(curr.slice(0, 12))}...</code></td>
             <td><code class="hash-pill" style="color: var(--text-caption);">\${escapeHtml(prev.slice(0, 12))}...</code></td>
-            <td><span class="badge badge-clean">VALID LINK</span></td>
+            <td>\${linkBadge}</td>
           </tr>
         \`;
       }).join('');
     }
 
+    function initEventHandlers() {
+      // Tab navigation
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.tab) switchTab(btn.dataset.tab);
+        });
+      });
+
+      // Filter buttons
+      document.querySelectorAll('#log-filter-control .segment-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.filter) setFilter(btn.dataset.filter);
+        });
+      });
+
+      // Timeline scrolling in header
+      const headerTimelineScroll = document.getElementById('timeline-metrics-bar');
+      if (headerTimelineScroll) {
+        headerTimelineScroll.addEventListener('click', (ev) => {
+          const btn = ev.target.closest('[data-scroll]');
+          if (btn && btn.dataset.scroll) scrollTimeline(btn.dataset.scroll);
+        });
+      }
+
+      // Timeline cards selection (delegated)
+      const timelineContainer = document.getElementById('timeline-content');
+      if (timelineContainer) {
+        timelineContainer.addEventListener('click', (ev) => {
+          const card = ev.target.closest('.timeline-node-card');
+          if (card && card.dataset.runId) {
+            selectTimelineRun(card.dataset.runId);
+          }
+        });
+      }
+
+      // Timeline inspector buttons (delegated)
+      const inspector = document.getElementById('timeline-inspector');
+      if (inspector) {
+        inspector.addEventListener('click', (ev) => {
+          const btn = ev.target.closest('button[data-action]');
+          if (!btn) return;
+          if (btn.dataset.action === 'focus-audit') {
+            focusAuditRun(btn.dataset.runId);
+          } else if (btn.dataset.action === 'close-inspector') {
+            selectedTimelineId = null;
+            renderTimeline(globalLogEntries);
+          }
+        });
+      }
+    }
+
+    initEventHandlers();
     loadData();
     setInterval(loadData, 3000);
   </script>

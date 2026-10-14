@@ -13,3 +13,4 @@ root-package-tarball/
 artifacts/
 safe-change-*.tgz
 safe-change-sbom.cdx.json
+safe-change-audit-anchor.json

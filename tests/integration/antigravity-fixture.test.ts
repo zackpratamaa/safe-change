@@ -266,6 +266,15 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
   });
 
   it("should throw safety violation if targetRoot is the real user home directory", () => {
+    const realHomeSkill = path.join(
+      os.homedir(),
+      ".gemini",
+      "config",
+      "skills",
+      "safe-change"
+    );
+    const existedBefore = fs.existsSync(realHomeSkill);
+
     expect(() => {
       installSkillFixture({
         scope: "global",
@@ -281,14 +290,7 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
     }).toThrow(/Safety violation/);
 
     // Real home directory must remain untouched
-    const realHomeSkill = path.join(
-      os.homedir(),
-      ".gemini",
-      "config",
-      "skills",
-      "safe-change"
-    );
-    expect(fs.existsSync(realHomeSkill)).toBe(false);
+    expect(fs.existsSync(realHomeSkill)).toBe(existedBefore);
   });
 
   it("should correctly handle target paths containing spaces", () => {
@@ -328,6 +330,15 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
   // Focused Security Tests Added to Address Blockers
 
   it("should reject targetRoot when it is a direct child, nested descendant, or case-variant of real home", () => {
+    const realHomeSkill = path.join(
+      os.homedir(),
+      ".gemini",
+      "config",
+      "skills",
+      "safe-change"
+    );
+    const existedBeforeHomeCheck = fs.existsSync(realHomeSkill);
+
     // Direct child of home
     const childOfHome = path.join(os.homedir(), "child-project");
     expect(() => {
@@ -388,6 +399,10 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
     }
 
     // Real home must remain untouched
+    expect(fs.existsSync(realHomeSkill)).toBe(existedBeforeHomeCheck);
+  });
+
+  it("should reject paths using .. traversal resolving into the real home directory", () => {
     const realHomeSkill = path.join(
       os.homedir(),
       ".gemini",
@@ -395,10 +410,8 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
       "skills",
       "safe-change"
     );
-    expect(fs.existsSync(realHomeSkill)).toBe(false);
-  });
+    const existedBeforeTraversalCheck = fs.existsSync(realHomeSkill);
 
-  it("should reject paths using .. traversal resolving into the real home directory", () => {
     // Traversal resolving to home
     const traversalToHome = path.join(os.homedir(), "projects", "..");
     expect(() => {
@@ -423,14 +436,7 @@ describe("Antigravity Installation Fixture (Simulation)", () => {
     }).toThrow(/Safety violation/);
 
     // Real home must remain untouched
-    const realHomeSkill = path.join(
-      os.homedir(),
-      ".gemini",
-      "config",
-      "skills",
-      "safe-change"
-    );
-    expect(fs.existsSync(realHomeSkill)).toBe(false);
+    expect(fs.existsSync(realHomeSkill)).toBe(existedBeforeTraversalCheck);
   });
 
   it("should reject target directory that is a symlink or junction pointing outside fixture", () => {

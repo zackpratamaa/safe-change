@@ -1,4 +1,4 @@
-import { verify } from "node:crypto";
+import { sign, verify } from "node:crypto";
 import type {
   EnforcementPolicy,
   PolicySignature,
@@ -15,6 +15,30 @@ export function enforcementPolicyDigest(
   policy: EnforcementPolicy
 ): string {
   return stableDigest(policy);
+}
+
+export function signEnforcementPolicy(
+  policy: EnforcementPolicy,
+  options: {
+    readonly keyId: string;
+    readonly privateKeyPem: string;
+    readonly publicKeyPem: string;
+  }
+): PolicySignature {
+  const computedDigest = enforcementPolicyDigest(policy);
+  const signatureBase64 = sign(
+    null,
+    Buffer.from(stableStringify(policy), "utf8"),
+    options.privateKeyPem
+  ).toString("base64");
+
+  return {
+    algorithm: "ed25519",
+    keyId: options.keyId,
+    publicKeyPem: options.publicKeyPem,
+    policyDigest: computedDigest,
+    signatureBase64,
+  };
 }
 
 export function verifyPolicySignature(

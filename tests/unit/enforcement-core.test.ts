@@ -10,7 +10,9 @@ import type {
 import {
   enforcementPolicyDigest,
   verifyPolicySignature,
+  signEnforcementPolicy,
 } from "../../src/enforcement/policy-signature.js";
+import { runPolicySign, runPolicyVerify } from "../../src/commands/policy.js";
 import { stableStringify } from "../../src/integrity/hash.js";
 import { evaluateOperation } from "../../src/enforcement/decision.js";
 import { validateEnforcementPolicy } from "../../src/enforcement/config.js";
@@ -130,6 +132,152 @@ describe("Enforcement Core", () => {
       verifyPolicySignature(config.enforcementPolicy!, config.policySignature)
         .valid,
     ).toBe(true);
+  });
+
+  it("verifies policies with explicit requireSignedApprovals: false and requireSignedApprovals: true", async () => {
+    // 1. Explicit requireSignedApprovals: false
+    const policyFalse = policy({
+      requireSignedPolicy: true,
+      approvals: {
+        thresholds: { "release:publish": 2 },
+        prohibitSelfApproval: true,
+        requireSignedApprovals: false,
+        maximumExceptionTtlSeconds: 3600,
+      },
+    });
+    const sigFalse = signPolicy(policyFalse);
+    expect(verifyPolicySignature(policyFalse, sigFalse).valid).toBe(true);
+
+    // 2. Explicit requireSignedApprovals: true
+    const policyTrue = policy({
+      requireSignedPolicy: true,
+      approvals: {
+        thresholds: { "release:publish": 2 },
+        prohibitSelfApproval: true,
+        requireSignedApprovals: true,
+        maximumExceptionTtlSeconds: 3600,
+      },
+    });
+    const sigTrue = signPolicy(policyTrue);
+    expect(verifyPolicySignature(policyTrue, sigTrue).valid).toBe(true);
+
+    // 3. Mutating true -> false must fail signature verification
+    const mutatedToFalse = {
+      ...policyTrue,
+      approvals: {
+        ...policyTrue.approvals,
+        requireSignedApprovals: false,
+      },
+    };
+    expect(verifyPolicySignature(mutatedToFalse, sigTrue).valid).toBe(false);
+
+    // 4. Mutating false -> true must fail signature verification
+    const mutatedToTrue = {
+      ...policyFalse,
+      approvals: {
+        ...policyFalse.approvals,
+        requireSignedApprovals: true,
+      },
+    };
+    expect(verifyPolicySignature(mutatedToTrue, sigFalse).valid).toBe(false);
+
+    // 5. Mutating omitted -> true must fail signature verification
+    const legacyPolicy = policy({ requireSignedPolicy: true });
+    const legacySig = signPolicy(legacyPolicy);
+    expect(verifyPolicySignature(mutatedToTrue, legacySig).valid).toBe(false);
+
+    // 6. Mutating approval threshold must fail signature verification
+    const mutatedThreshold = {
+      ...policyTrue,
+      approvals: {
+        ...policyTrue.approvals,
+        thresholds: { "release:publish": 1 },
+      },
+    };
+    expect(verifyPolicySignature(mutatedThreshold, sigTrue).valid).toBe(false);
+
+    // 7. Mutating allow/deny capability or resource scope must fail signature verification
+    const mutatedScope = {
+      ...policyTrue,
+      agents: [
+        {
+          ...policyTrue.agents[0]!,
+          resourcePatterns: ["**"],
+        },
+      ],
+    };
+    expect(verifyPolicySignature(mutatedScope, sigTrue).valid).toBe(false);
+
+    const mutatedDeny = {
+      ...policyTrue,
+      agents: [
+        {
+          ...policyTrue.agents[0]!,
+          deny: [],
+        },
+      ],
+    };
+    expect(verifyPolicySignature(mutatedDeny, sigTrue).valid).toBe(false);
+  });
+
+  it("rejects configuration when signature is stale, malformed, or tampered", async () => {
+    const validPolicy = policy({ requireSignedPolicy: true });
+    const validSig = signPolicy(validPolicy);
+
+    // Malformed signature base64
+    await repo.writeFile(
+      ".safe-change.json",
+      JSON.stringify({
+        version: 1,
+        checks: [],
+        enforcementPolicy: validPolicy,
+        policySignature: {
+          ...validSig,
+          signatureBase64: "bm90LWEtdmFsaWQtZWQyNTUxOS1zaWduYXR1cmU=",
+        },
+      }),
+    );
+    await expect(loadConfig(repo.path)).rejects.toThrow(ConfigError);
+
+    // Stale signature (signature from another policy)
+    const anotherPolicy = policy({
+      requireSignedPolicy: true,
+      defaultDecision: "deny",
+    });
+    const staleSig = signPolicy({
+      ...anotherPolicy,
+      commandSandbox: {
+        ...anotherPolicy.commandSandbox,
+        maxOutputBytes: 204_800,
+      },
+    });
+    await repo.writeFile(
+      ".safe-change.json",
+      JSON.stringify({
+        version: 1,
+        checks: [],
+        enforcementPolicy: validPolicy,
+        policySignature: staleSig,
+      }),
+    );
+    await expect(loadConfig(repo.path)).rejects.toThrow(ConfigError);
+  });
+
+  it("canonicalization ignores property key order and verifies identical semantics", async () => {
+    // Construct approvals with reverse property insertion order
+    const reversedApprovals: any = {};
+    reversedApprovals.maximumExceptionTtlSeconds = 3600;
+    reversedApprovals.prohibitSelfApproval = true;
+    reversedApprovals.thresholds = { "release:publish": 2 };
+
+    const policyA = policy({ requireSignedPolicy: true });
+    const policyB = {
+      ...policyA,
+      approvals: reversedApprovals,
+    };
+
+    const sigA = signPolicy(policyA);
+    expect(verifyPolicySignature(policyB, sigA).valid).toBe(true);
   });
 
   it("denies explicit capability and out-of-scope resource access", async () => {
@@ -298,5 +446,60 @@ describe("Enforcement Core", () => {
     await expect(readApprovalRequest(repo.path, request.id)).rejects.toThrow(
       "integrity verification failed",
     );
+  });
+
+  it("programmatically signs enforcement policy with signEnforcementPolicy", () => {
+    const original = policy({ requireSignedPolicy: true });
+    const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+    const sig = signEnforcementPolicy(original, {
+      keyId: "org-security-lead",
+      privateKeyPem: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+      publicKeyPem: publicKey.export({ type: "spki", format: "pem" }).toString(),
+    });
+
+    expect(sig.algorithm).toBe("ed25519");
+    expect(sig.keyId).toBe("org-security-lead");
+    expect(sig.policyDigest).toBe(enforcementPolicyDigest(original));
+
+    const verification = verifyPolicySignature(original, sig);
+    expect(verification.valid).toBe(true);
+    expect(verification.reason).toContain("valid");
+  });
+
+  it("executes runPolicySign to sign and write policySignature to .safe-change.json", async () => {
+    const originalCwd = process.cwd();
+    process.chdir(repo.path);
+    try {
+      const config = {
+        version: 1,
+        checks: [{ name: "build", executable: "npm", args: ["run", "build"] }],
+        enforcementPolicy: policy(),
+      };
+      await writeFile(
+        join(repo.path, ".safe-change.json"),
+        JSON.stringify(config, null, 2),
+        "utf8"
+      );
+
+      const exitCode = await runPolicySign({
+        format: "json",
+        keyId: "owner-key-1",
+        write: true,
+      });
+      expect(exitCode).toBe(0);
+
+      const written = JSON.parse(
+        await readFile(join(repo.path, ".safe-change.json"), "utf8")
+      );
+      expect(written.policySignature).toBeDefined();
+      expect(written.policySignature.keyId).toBe("owner-key-1");
+      expect(written.policySignature.algorithm).toBe("ed25519");
+
+      // Verify with runPolicyVerify
+      const verifyCode = await runPolicyVerify({ format: "json" });
+      expect(verifyCode).toBe(0);
+    } finally {
+      process.chdir(originalCwd);
+    }
   });
 });

@@ -18,7 +18,7 @@ import { runEvidence } from "./commands/evidence.js";
 import { runAudit } from "./commands/audit.js";
 import { runAuthorize } from "./commands/authorize.js";
 import { runApproval } from "./commands/approval.js";
-import { runPolicyVerify } from "./commands/policy.js";
+import { runPolicyVerify, runPolicySign } from "./commands/policy.js";
 import { runLog } from "./commands/log.js";
 import { runInstall } from "./installer/commands/install.js";
 import { runUpdate } from "./installer/commands/update.js";
@@ -60,6 +60,7 @@ interface ParsedArgs {
     stat: boolean;
     strict: boolean;
     updateGitignore: boolean;
+    write: boolean;
   };
   logOptions: {
     last?: number;
@@ -99,6 +100,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       stat: false,
       strict: false,
       updateGitignore: false,
+      write: false,
     },
     logOptions: {},
     dashboardOptions: {},
@@ -123,6 +125,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       result.flags.stat = true;
     } else if (arg === "--overwrite") {
       result.flags.overwrite = true;
+    } else if (arg === "--write") {
+      result.flags.write = true;
     } else if (arg === "--update-gitignore") {
       result.flags.updateGitignore = true;
     } else if (arg === "--dry-run") {
@@ -572,12 +576,21 @@ async function main(): Promise<void> {
     }
 
     case "policy": {
-      if ((parsed.positional[0] ?? "verify") !== "verify") {
-        process.stderr.write("Only `safe-change policy verify` is supported.\n");
+      const sub = parsed.positional[0] ?? "verify";
+      if (sub === "verify") {
+        exitCode = await runPolicyVerify({ format });
+      } else if (sub === "sign") {
+        exitCode = await runPolicySign({
+          format,
+          keyId: parsed.options.keyId,
+          privateKeyPath: parsed.options.privateKey,
+          publicKeyPath: parsed.options.publicKey,
+          write: parsed.flags.write,
+        });
+      } else {
+        process.stderr.write(`Unknown policy subcommand "${sub}". Supported subcommands: verify, sign.\n`);
         exitCode = ExitCodes.CONFIG_ERROR;
-        break;
       }
-      exitCode = await runPolicyVerify({ format });
       break;
     }
 

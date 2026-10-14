@@ -243,16 +243,21 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Generate external audit log anchor for release attestation
+        run: node scripts/anchor-audit-digest.mjs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         run: |
           if [[ "$RELEASE_TAG" == *-* ]]; then
             gh release create "$RELEASE_TAG" --prerelease --latest=false \
               --title "$RELEASE_TAG — Experimental Developer Preview" \
-              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json
+              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json
           else
             gh release create "$RELEASE_TAG" \
               --title "$RELEASE_TAG" \
-              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json
+              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

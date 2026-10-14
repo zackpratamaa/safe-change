@@ -105,4 +105,55 @@ describe("config/loader", () => {
     await writeFile(join(tempDir, ".safe-change.json"), JSON.stringify(config));
     await expect(loadConfig(tempDir)).rejects.toThrow(/exceeds maximum/);
   });
+
+  it("loads the project active configuration with requireSignedApprovals: true", async () => {
+    const projectRoot = process.cwd();
+    const config = await loadConfig(projectRoot);
+    expect(config.enforcementPolicy).toBeDefined();
+    expect(config.enforcementPolicy?.approvals.requireSignedApprovals).toBe(true);
+    expect(config.enterprisePolicy?.minimumMode).toBe("high-assurance");
+  });
+
+  it("preserves explicit requireSignedApprovals: false or omitted in loaded config", async () => {
+    const configOmitted = {
+      version: 1,
+      checks: [{ name: "build", executable: "npm", args: ["run", "build"] }],
+      enforcementPolicy: {
+        policyVersion: 1,
+        defaultDecision: "deny",
+        requireSignedPolicy: false,
+        agents: [],
+        commandSandbox: {
+          allowedExecutables: ["node"],
+          deniedArguments: [],
+          allowedEnvironment: [],
+          inheritEnvironment: false,
+          networkPolicy: "inherit",
+          maxOutputBytes: 1024,
+        },
+        approvals: {
+          thresholds: { "release:publish": 1 },
+          prohibitSelfApproval: true,
+          maximumExceptionTtlSeconds: 3600,
+        },
+      },
+    };
+    await writeFile(join(tempDir, ".safe-change.json"), JSON.stringify(configOmitted));
+    const resultOmitted = await loadConfig(tempDir);
+    expect(resultOmitted.enforcementPolicy?.approvals.requireSignedApprovals).toBeUndefined();
+
+    const configExplicitFalse = {
+      ...configOmitted,
+      enforcementPolicy: {
+        ...configOmitted.enforcementPolicy,
+        approvals: {
+          ...configOmitted.enforcementPolicy.approvals,
+          requireSignedApprovals: false,
+        },
+      },
+    };
+    await writeFile(join(tempDir, ".safe-change.json"), JSON.stringify(configExplicitFalse));
+    const resultFalse = await loadConfig(tempDir);
+    expect(resultFalse.enforcementPolicy?.approvals.requireSignedApprovals).toBe(false);
+  });
 });

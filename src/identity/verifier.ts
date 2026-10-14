@@ -56,7 +56,17 @@ export function verifySignedApprovalGrant(
     };
   }
 
-  // 2. Check Key Revocation
+  // 2. Check Approver Identity Matches Registered Owner
+  if (
+    grant.approverIdentity.trim().toLowerCase() !==
+    identity.owner.trim().toLowerCase()
+  ) {
+    reasons.push(
+      `Grant approverIdentity '${grant.approverIdentity}' does not match trusted identity owner '${identity.owner}'`
+    );
+  }
+
+  // 3. Check Key Revocation
   if (identity.revoked) {
     reasons.push(
       `Approver keyId '${identity.keyId}' was revoked at ${identity.revokedAt}: ${identity.revocationReason}`
@@ -241,8 +251,11 @@ export function verifyApprovalThreshold(
       continue;
     }
 
+    // Advance chain digest for any valid, approved grant in the sequence
+    expectedPreviousDigest = canonicalGrantDigest(grant);
+
     const identity = findIdentity(registry, grant.approverKeyId);
-    const principal = (identity?.owner || grant.approverIdentity).toLowerCase();
+    const principal = (identity?.owner || grant.approverIdentity).trim().toLowerCase();
     const normalizedKey = identity ? identity.publicKeyPem.replace(/\s+/g, "") : "";
 
     // Deduplicate: multiple signatures from the same key, owner/principal, or public key count once
@@ -260,7 +273,6 @@ export function verifyApprovalThreshold(
       validPublicKeys.add(normalizedKey);
     }
     validApproverIdentities.add(grant.approverIdentity);
-    expectedPreviousDigest = canonicalGrantDigest(grant);
   }
 
   const distinctCount = validPrincipals.size;
