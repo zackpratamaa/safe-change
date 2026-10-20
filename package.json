@@ -28,7 +28,10 @@
     "LICENSE",
     "LICENSE_CHANGE.md",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "tools/java",
+    "docs/java-verification.md",
+    "docs/getting-started.md"
   ],
   "scripts": {
     "build": "tsc",

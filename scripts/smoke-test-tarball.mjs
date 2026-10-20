@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { execFileSync } from 'node:child_process';
@@ -20,6 +20,11 @@ async function main() {
     const expectCode=(code,...args)=>{try{run(...args);assert(code===0,`${args.join(' ')} exit ${code}`);}catch(e){if(e.status!==code)throw e;records.push(`${args.join(' ')} exit ${code}`);return e.stdout?.toString();}};
     const version=JSON.parse(await readFile(join(repoRoot,'package.json'),'utf8')).version;
     assert(run('--version').includes(version),'installed CLI version matches tarball');
+    assert((await readFile(join(installed,'tools','java','JavaSourceCheck.java'),'utf8')).includes('class JavaSourceCheck'),'Java source helper ships in the tarball');
+    assert((await readFile(join(installed,'docs','getting-started.md'),'utf8')).includes('safe-change doctor'),'getting-started guide ships in the tarball');
+    const diagnostic=JSON.parse(run('doctor','--json'));
+    assert(diagnostic.schemaVersion===1&&diagnostic.scope==='local-readiness','packaged doctor returns a machine-readable readiness report');
+    assert(diagnostic.checks.some(item=>item.id==='node'),'doctor includes Node runtime inspection');
     command('git',['init']);command('git',['config','user.name','SafeChangePreview']);command('git',['config','user.email','preview@example.invalid']);
     await writeFile(join(project,'.gitignore'),'node_modules/\n.safe-change/\n');
     run('init','--json');
@@ -50,6 +55,17 @@ async function main() {
       const text=result.content?.find(c=>c.type==='text')?.text;
       assert(text&&JSON.parse(text).verification.state==='failed','packaged MCP reports controlled regression');
     } finally {await client.close();await transport.close();}
+    if(process.env.SAFE_CHANGE_TEST_PACKAGED_JAVA==='1') {
+      const java=process.env.JAVA_HOME?join(process.env.JAVA_HOME,'bin',windows?'java.exe':'java'):'java';
+      const source=join(project,'java-source');await mkdir(source);
+      const helper=join(installed,'tools','java','JavaSourceCheck.java');
+      await writeFile(join(source,'Greeting.java'),'public final class Greeting { public static String value() { return "ok"; } }\n');
+      assert(command(java,[helper,source]).includes('Java compilation passed'),'installed Java helper compiles valid source');
+      await writeFile(join(source,'Greeting.java'),'public final class Greeting { public static String value() { return 123; } }\n');
+      let rejected=false;try{command(java,[helper,source]);}catch(error){if(error.status!==1)throw error;rejected=true;}
+      assert(rejected,'installed Java helper rejects a compilation regression');
+      assert((await readdir(source)).join(',')==='Greeting.java','installed Java helper leaves no class files in source');
+    }
     console.log(JSON.stringify({status:'PASS',version,records,limits:['TypeScript fallback installation (--omit=optional); no native distribution certification','Hook protocol and actual stdio MCP, not a live IDE/agent consent test']}));
     console.log('ALL SMOKE TESTS PASSED SUCCESSFULLY!');
   } finally {await rm(project,{recursive:true,force:true});if(tarball)await rm(tarball,{force:true});}

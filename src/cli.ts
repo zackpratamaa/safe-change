@@ -7,6 +7,7 @@ import { ExitCodes } from "./types/index.js";
 import type { InstallerScope } from "./installer/core/path-safety.js";
 import { runQuality } from "./commands/quality.js";
 import { runSession } from "./commands/session.js";
+import { runDoctor } from "./commands/doctor.js";
 import { runInit } from "./commands/init.js";
 import { runSave } from "./commands/save.js";
 import { runCheck } from "./commands/check.js";
@@ -279,6 +280,7 @@ const HELP_TEXT = `
 safe-change -- A safety net for AI-assisted coding.
 
 Usage:
+  safe-change doctor [--json]      Diagnose local setup without running project checks.
   safe-change init [options]       Auto-detect test runners and create configuration.
   safe-change save [description]   Record a baseline of the repository and verification results.
   safe-change check                Compare current state against the baseline.
@@ -386,6 +388,11 @@ async function main(): Promise<void> {
   let exitCode: number;
 
   switch (parsed.command) {
+    case "doctor": {
+      exitCode = await runDoctor({ format });
+      break;
+    }
+
     case "init": {
       exitCode = await runInit({
         format,
