@@ -108,7 +108,7 @@ jobs:
         run: npm run build
 
       - name: Verify TypeScript fallback without native binary
-        run: npm test
+        run: npm test -- --reporter=default --reporter=github-actions
         env:
           SAFE_CHANGE_NATIVE_DISABLED: "1"
 
@@ -119,13 +119,7 @@ jobs:
         shell: bash
 
       - name: Build Native Module for ${{ matrix.target }}
-        run: |
-          cd crates/safe-change-native
-          if [ "${{ matrix.target }}" = "linux-x64-musl" ]; then
-            CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc RUSTFLAGS="-C target-feature=-crt-static" npx napi build --platform --release --target x86_64-unknown-linux-musl
-          else
-            npx napi build --platform --release
-          fi
+        run: bash scripts/ci-native-build.sh ${{ matrix.target }}
         shell: bash
 
       - name: Verify generated native binary exists
