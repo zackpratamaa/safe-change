@@ -2,15 +2,15 @@
 
 ## Status
 
-safe-change 0.3.x is actively maintained. This document describes the security boundaries, threat models, and operational invariants implemented in the system.
+This source tree is **1.1.0-preview.1 — Experimental developer preview**, not a general-availability security certification. The version is declared in [package.json](package.json). No independent security review or soak/stabilization period is asserted by this document.
 
 ## Supported versions
 
 | Version | Supported | Security Update Policy |
 | :--- | :--- | :--- |
-| `0.3.x` | Yes | Active patches and security fixes |
-| `0.2.x` | Yes | Maintenance security fixes |
-| `< 0.2.0` | No | Upgrade to latest release |
+| `1.1.0-preview.1` | Experimental preview | Source hardening and preview fixes; not a GA support promise |
+
+This table describes the current source snapshot, not the npm `latest` channel. Historical release entries do not establish a current maintenance promise for older series.
 
 ## Reporting a vulnerability
 
@@ -73,7 +73,7 @@ Each command runs with:
 - Terminal output sanitizes control characters (stripping non-printable control characters except newline, carriage return, and tab) to mitigate terminal escape injection.
 - JSON output uses standard serialization without executing embedded content.
 - Baseline files store file hashes (sha256), not file contents. This privacy-preserving design minimizes disk footprint and prevents accidental leakage of secrets or source code into tool state.
-- Process stdout/stderr is captured in bounded buffers for diagnostic display. safe-change does NOT perform automated secret or token detection; configured checks should avoid emitting sensitive credentials.
+- Process stdout/stderr is captured in bounded buffers for diagnostic display. configured checks must avoid emitting sensitive credentials. Do not rely on output filtering as complete secret detection or data-loss prevention.
 
 ### Configuration trust model (`.safe-change.json`)
 
@@ -89,8 +89,8 @@ The `.safe-change.json` file defines the verification commands executed during `
 
 safe-change includes an embedded local dashboard (`safe-change dashboard`) powered by Node.js's native `node:http` standard library. The server design adheres to strict defensive security constraints:
 
-1. **Zero-Dependency Supply Chain Isolation:** Rather than importing large external web framework dependency trees (which introduce dependency confusion and supply chain attack surfaces), the server is built entirely with Node.js built-ins (`node:http`, `node:fs/promises`, `node:path`).
-2. **Loopback Only (`127.0.0.1`):** The server explicitly binds to IPv4 loopback `127.0.0.1`. It is strictly unreachable from external network interfaces or local network peers.
+1. **HTTP implementation:** The server uses Node.js `node:http`, rather than an external HTTP framework. The package still has runtime dependencies declared in `package.json`; this is not a zero-dependency supply-chain guarantee.
+2. **Local status API:** All dashboard endpoints bind to `127.0.0.1` only and their handlers do not initiate external network uploads. See `LOCALHOST_HOST` and `startDashboardServer` in [src/dashboard/server.ts](src/dashboard/server.ts), plus the runtime test `binds only to 127.0.0.1` in [tests/unit/dashboard-server.test.ts](tests/unit/dashboard-server.test.ts). This is a loopback listener, not local-user authentication or a guarantee against reverse proxies/port forwarding. Configured checks and programs launched by the user can independently access external networks.
 3. **Fixed Route Allowlist:** Only 10 static endpoints are served (`/`, `/api/status`, `/api/log`, `/api/config`, `/api/rules`, `/api/enterprise`, `/api/lease`, `/api/audit`, `/api/identity`, `/api/verifiable`). Any other path immediately returns a 404 response.
 4. **No Path Traversal or Arbitrary File Serving:** The dashboard does not accept file paths as query parameters or URL path components. All returned JSON data is assembled in-memory from validated internal data structures, and the HTML template is rendered entirely from an embedded in-memory string. No dynamic disk file-serving logic exists.
 5. **Strict Method Restriction:** The server only accepts `GET` requests. Any `POST`, `PUT`, `DELETE`, or other HTTP method is immediately rejected with `405 Method Not Allowed`.
@@ -153,22 +153,21 @@ User-configured verification commands can themselves be destructive or communica
 
 A safe-change baseline is not a general-purpose backup. It stores hashes for comparison, not full file contents for restoration.
 
-safe-change does not redact secrets, API keys, or sensitive credentials from process output or terminal displays. Ensure configured test commands do not print credentials.
+Output filtering is not a complete confidentiality boundary. Ensure configured test commands do not print credentials; exposed real credentials require rotation regardless of filtering.
 
 ## Dependency security policy
 
 safe-change maintains strict separation between production dependencies and development tooling:
 
 1. **Production Dependencies**:
-   - Zero external runtime dependencies for core CLI, git inspection, comparator, rules engine, and local dashboard (powered by Node.js standard libraries).
-   - Only standard MCP protocol SDK (`@modelcontextprotocol/sdk`) is included for the MCP server.
+   - Root runtime dependencies include `@modelcontextprotocol/sdk` and `typescript`; optional platform-native packages are declared separately. Consult the exact root manifest and lockfile rather than assuming a zero-dependency CLI.
    - Any High or Critical CVE in production dependencies is an absolute release blocker.
    - Continuous gate: `npm audit --omit=dev --audit-level=high` runs on every CI commit and pull request.
 
 2. **Development Tooling**:
-   - Compilers (`typescript`, `napi-rs`), test runners (`vitest`), and coverage tools (`@vitest/coverage-v8`).
+   - Native build tooling (`@napi-rs/cli`), test runners (`vitest`), coverage tools (`@vitest/coverage-v8`), and Node type declarations; TypeScript is also a runtime dependency.
    - Automated dependency monitoring via Dependabot for monthly security patches.
-   - Vitest, Vite, and Esbuild are pinned to patched, non-vulnerable versions.
+   - Dependency audit results are specific to the lockfile, advisory database, and actual run; they are not proof that dependencies have no vulnerabilities.
    - No untrusted or arbitrary post-install scripts.
 
 3. **Release Blockers**:
@@ -181,7 +180,7 @@ safe-change maintains strict separation between production dependencies and deve
  
 The following security verifications are mandatory for all releases:
 - Private vulnerability reporting configured.
-- Package entry points, zero-dependency model, and publication file allowlists verified.
+- Package entry points, declared runtime dependency inventory, and publication file allowlists verified.
 - Supported-versions policy defined and documented.
 - Architecture validation for all native platform packages before npm publish.
 - npm provenance enabled for cryptographic build attestation.

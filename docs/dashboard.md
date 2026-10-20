@@ -1,10 +1,10 @@
-# Local Web Dashboard — Enterprise Edition
+# Local dashboard and local status API — Experimental preview
 
 The safe-change local dashboard provides a clean, visual interface for monitoring baseline state, inspecting verification history, assessing enterprise risk, and tracking cryptographic trust during AI agent sessions.
 
 ## Overview
 
-The dashboard runs as an embedded, zero-dependency HTTP server directly from the safe-change binary. It requires no external web frameworks, Node dependencies, or internet connectivity. The interface uses a liquid-glass design system built on Apple San Francisco typography, structured layout grids, interactive inspection drawers, and dedicated tabs for enterprise verification telemetry.
+The dashboard uses an embedded Node.js HTTP server. The package has runtime dependencies declared in the root manifest; this is not a zero-dependency package claim. The local status handlers are not a telemetry upload service. The interface uses a liquid-glass design system built on Apple San Francisco typography, structured layout grids, interactive inspection drawers, and dedicated tabs for local verification status.
 
 The dashboard displays the brand mark **`/SAFE-CHANGE`** and is designed to provide full transparency into AI-driven code modifications.
 
@@ -41,7 +41,7 @@ The top header metric grid aggregates real-time repository health into six respo
 2. **Monitored Baseline**: Number of tracked codebase files and confirmation of the active baseline snapshot.
 3. **Enterprise Risk & Mode**: Dynamic risk score (`0–100`) and the active operating mode (`STANDARD`, `ENHANCED`, `HIGH_ASSURANCE`, or `CRITICAL_CHANGE`).
 4. **Change Budget**: Evaluates whether working-tree additions, deletions, and file modifications remain within configured enterprise bounds.
-5. **Active Write Lease**: Displays write lease lock state (`Unlocked` vs `Locked by Holder`), protecting the repository from concurrent AI modification races.
+5. **Active Write Lease**: Displays write lease lock state (`Unlocked` vs `Locked by Holder`), indicating cooperative coordination, not blocking arbitrary filesystem writes by another agent.
 6. **Audit & Trust**: Real-time verification of the tamper-evident SHA-256 audit hash chain and total recorded events count.
 
 ---
@@ -81,9 +81,9 @@ The primary operational cockpit, preserving the four core monitoring panels:
 
 ---
 
-## Embedded REST API Endpoints
+## Local status API endpoints
 
-The dashboard exposes read-only JSON telemetry endpoints for inspection and external automation:
+The dashboard exposes read-only local JSON status endpoints for inspection by local clients:
 
 | Endpoint | HTTP Method | Description |
 |---|:---:|---|
@@ -123,9 +123,9 @@ If the specified port cannot be bound, the CLI reports an error and exits cleanl
 
 ## Security and Privacy
 
-The dashboard is engineered with defense-in-depth security boundaries appropriate for high-assurance enterprise development:
+Experimental preview boundaries; these controls do not establish high-assurance certification or independent review:
 
-- **Localhost-Only Binding**: The HTTP server strictly binds to `127.0.0.1`. It never listens on `0.0.0.0` or external network interfaces, preventing remote access over local area networks or public IP addresses.
+- **Localhost-Only Binding**: The HTTP server strictly binds to `127.0.0.1`. It never listens on `0.0.0.0` or external network interfaces, but does not authenticate other local processes or prevent an operator from exposing the port through a proxy or forwarding rule. See [the binding implementation](../src/dashboard/server.ts) and the `binds only to 127.0.0.1` [runtime test](../tests/unit/dashboard-server.test.ts).
 - **Air-Gapped Operation**: The dashboard assets, CSS styles, and typography are rendered locally without third-party CDN dependencies, tracking scripts, or external network requests.
 - **Read-Only Access**: The dashboard interface provides read-only inspection of `.safe-change/` artifacts. It cannot mutate repository state, alter Git history, or modify source code files.
 - **Method Restriction**: Rejects any non-`GET` HTTP request immediately with `405 Method Not Allowed`.

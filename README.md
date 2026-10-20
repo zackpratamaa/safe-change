@@ -23,33 +23,11 @@
 
 <br/>
 
-## Local readiness and state integrity (unreleased source)
+## Start with save / check / diff
 
-Run `safe-change doctor --json` to inspect local setup without executing project checks. Start with the [getting-started guide](docs/getting-started.md), [Java verification helper](docs/java-verification.md), and [state storage boundaries](docs/state-storage.md). Source changes are not automatically available in an older npm release.
+safe-change compares configured checks and Git-visible file inputs before and after edits. It is a local safety net for honest mistakes, not a guarantee that code is correct or secure.
 
-## Experimental task sessions (unreleased source)
-
-Task-scoped change contracts, interactive verification-timing choices, a separately started polling observer, and cooperative edit/finish gates are available in source. Observation is not verification, and installing a skill does not launch a watcher. The Claude-compatible hook adapter is protocol-tested, not live-IDE certified. See [task sessions](docs/task-sessions.md) and the [nine-repository reference ledger](docs/reference-adaptation.md).
-
-## Why safe-change exists
-
-Autonomous AI coding agents are rewriting production codebases at unprecedented speed. When you delegate tasks to an AI agent, it touches dozens of files, mutates dependencies, and restructures critical architectural boundaries. The app might still compile and start, but subtle logic has been inverted, authorization guards removed, or regressions silently introduced — leaving developers guessing what broke and why.
-
-Without an authoritative baseline and verifiable execution gates:
-- **Regressions become forensic nightmares**: You don't know which agent action broke passing invariant checks.
-- **AST semantic drift goes undetected**: Inverted logic conditions, removed safety guards, and swallowed errors bypass superficial diffs.
-- **Concurrent multi-agent writes corrupt state**: Uncoordinated agent actions race against each other and your working tree.
-- **Enterprise provenance is impossible to prove**: There is zero cryptographic evidence of who authorized, executed, and verified the changes.
-
-**safe-change is the verifiable execution sentinel and high-assurance safety plane for autonomous AI development.**
-
-It locks in cryptographic baselines before AI agents touch your code, isolates execution within OS-backed sandboxes, verifies AST semantic integrity, enforces enterprise change budgets, and generates in-toto RFC 8785 Ed25519-signed attestations — completely air-gapped, zero cloud dependencies, and 100% deterministic.
-
-<br/>
-
----
-
-<br/>
+**Experimental developer preview: 1.1.0-preview.1.** This source tree is not a general-availability security certification. A source change is not automatically present in an older npm release. Advanced policy, integrity and signing tools are opt-in and are labeled below.
 
 ## How it works
 
@@ -111,7 +89,7 @@ npm install -g safe-change
 safe-change --version
 ```
 
-> Node.js ≥ 18. No build step. No compiler. No cloud account.
+> The package declares Node.js ≥ 18. Clean-package CI currently exercises Node.js 22 and 24; the declared minimum is not a claim of equivalent CI coverage. Java verification additionally requires a JDK. Native binaries are optional; see the preview guide for the tested fallback route.
 
 <br/>
 
@@ -121,7 +99,7 @@ safe-change --version
 
 ## Quick start
 
-**1. Initialize your project in 1 second**
+**1. Initialize and review your project configuration**
 
 ```bash
 safe-change init
@@ -153,52 +131,51 @@ safe-change diff --stat
 
 <br/>
 
+## Local readiness and state integrity (unreleased source)
+
+Run `safe-change doctor --json` to inspect local setup without executing project checks. Start with the [getting-started guide](docs/getting-started.md), [Java verification helper](docs/java-verification.md), and [state storage boundaries](docs/state-storage.md). Source changes are not automatically available in an older npm release.
+
 ## Commands
 
-| Command | What it does |
+Start with these commands; advanced policy and signing are not prerequisites.
+
+| Command | Purpose |
 |---|---|
-| `doctor [--json]` | Diagnose local setup without running project checks; not verification certification |
-| `init` | Auto-detect test runners, create `.safe-change.json` (use `--update-gitignore` to update `.gitignore`) |
-| `save [description]` | Run checks and record Git-visible inputs; reject input mutation |
-| `check [--strict]` | Compare with baseline; strict exits 0 only for verified status |
-| `diff [--stat]` | List files added, modified, deleted, and line change stats |
-| `assess` | Score change risk, enforce policy, and determine the minimum operating mode |
-| `lease acquire <session> <agent>` | Atomically acquire the repository write lease |
-| `lease status` | Inspect the active or expired write lease |
-| `lease release <session>` | Release a write lease only when session ownership matches |
-| `fingerprint` | Capture the current workspace identity and environment digest |
-| `fingerprint check` | Compare the current workspace against the baseline fingerprint |
-| `evidence <session>` | Create a source-free checksummed evidence bundle |
-| `audit verify` | Verify the tamper-evident session event chain |
-| `authorize <capability> <resource> <agent> <session> [approval]` | Evaluate policy; caller must enforce the decision |
-| `approval request` | Create a scoped, expiring approval request |
-| `approval grant` | Add one independent approval to a request |
-| `approval status` | Inspect request integrity, grants, and expiration |
-| `policy verify` | Verify the configured detached Ed25519 policy signature |
-| `semantic-diff [--base <ref>]` | AST semantic diff analysis for breaking changes and logic mutations |
-| `replay record <session> \| verify <file>` | Record/verify metadata; --reexecute requests a detached-worktree rerun |
-| `attest create <session> \| verify <file>` | Sign/verify attestation with approved PEM key and required inputs |
-| `identity keygen \| register \| list` | Manage authorized Ed25519 approver keys in the trust registry |
-| `approval sign <req> \| verify` | Cryptographically sign or verify capability requests with Ed25519 |
-| `log` | Full history of baselines and check results |
-| `dashboard` | Open visual enterprise dashboard at `localhost:4242` |
-| `rules list` | Show active safety rules |
-| `rules add <id>` | Add a built-in safety rule |
-| `rules remove <id>` | Remove a safety rule |
-| `install <agent\|all>` | Install skill for a specific agent or all detected agents |
-| `update <agent\|all>` | Update installed skill to latest |
-| `uninstall <agent\|all>` | Remove installed skill |
-| `status [agent]` | Show install status, detected agents, drift |
-| `mcp` | Start MCP server on stdio |
+| `init` | Generate a check configuration; review it before execution |
+| `save [description]` | Run configured checks and record a baseline |
+| `check` | Compare with the baseline; exit 0 means no new regression, not necessarily verified |
+| `check --strict --json` | Require verified status for a delivery gate |
+| `diff [--stat]` | Inspect changed files and optional line statistics |
+| `doctor --json` | Inspect local readiness without running project checks; not certification |
+| `log` | Inspect local baseline/check history |
+| `dashboard --no-open` | Start a loopback status dashboard |
+| `rules list` | Inspect configured safety rules |
+| `install <agent|all>` | Install reviewed skill files for a supported adapter |
+| `update <agent|all>` / `uninstall <agent|all>` | Update or remove owned skill files |
+| `status [agent]` | Inspect installation state |
+| `mcp` | Start the stdio MCP server for a configured client |
 
-All commands accept `--json` for structured output and `--help` for usage details.
-Installer commands accept `--scope <project|global>`, `--dry-run`, and `--overwrite`.
+Use each command's `--help` for its actual options. Installation is not evidence that an IDE or agent invoked a skill.
 
-<br/>
+## Verification integrity
 
----
+These changes describe current source. They are not automatically included in an older published npm package; check the approved release/commit.
 
-<br/>
+Use `safe-change check --strict --json` for a verified-only CI/agent gate. Plain
+`check` retains its no-new-regression exit contract and can exit 0 with a
+`failed` or `not-verified` status. MCP `safe_change_check` supports `strict: true`.
+
+Checks now bind their reports to Git-visible source, baseline, and environment
+digests; input mutation during execution invalidates verification. Conventional
+test files and configured command scripts are protected from unnoticed changes.
+Add custom oracle paths using `protectedVerificationPaths`. Stale evidence is
+explicitly downgraded to `not-verified`, and semantic diff includes deletions.
+
+See [Documentation status](docs/documentation-status.md) for current versus historical references.
+
+See [Verification integrity and strict gates](docs/verification-integrity.md)
+for migration, conservative test-review behavior, and trust/coverage limits.
+These controls do not make unrestricted same-user agent execution tamper-proof.
 
 ## Supported agents
 
@@ -222,9 +199,9 @@ safe-change install all
 
 > **Note on verification status:** All listed agents currently ship with `filesystem-validated` status: their adapters are validated for installing, reading, and removing skill files at the expected paths. MCP server tests validate protocol/tool behavior separately; they do not establish live integration with every agent. Per-agent MCP runtime and skill auto-invocation remain **pending evidence** until a reproducible session record is linked in [docs/runtime-verification.md](docs/runtime-verification.md). Muse Code is not yet a listed, runtime-verified integration. If an agent does not pick up the installed skill, please [open an issue](https://github.com/zackpratamaa/safe-change/issues).
 
-### Enterprise skill policy
+### Optional skill policy — Experimental
 
-Each installation deterministically combines the canonical safety contract with a validated profile for the selected agent. The policy includes Standard, High Assurance, and Incident modes; microscopic syntax-boundary review; fail-closed evidence rules; prompt-injection boundaries; concurrent-drift detection; test-integrity controls; release gates; and a required verification report.
+Each installation combines the canonical safety contract with a validated profile for the selected agent. The policy includes Standard, High Assurance, and Incident modes; microscopic syntax-boundary review; fail-closed evidence rules; prompt-injection boundaries; concurrent-drift detection; test-integrity controls; release gates; and a required verification report.
 
 The ownership manifest records canonical, profile, and composed SHA-256 values. `safe-change status` therefore detects drift in either the shared policy or the agent-specific profile. See [docs/enterprise-skill-policy.md](docs/enterprise-skill-policy.md).
 
@@ -236,7 +213,7 @@ The ownership manifest records canonical, profile, and composed SHA-256 values. 
 
 ## MCP server
 
-Agents that support the Model Context Protocol can invoke safe-change as a native tool — no SKILL.md, no manual setup, no PATH configuration needed.
+Compatible MCP clients can invoke the configured stdio server. Installation, executable resolution and client configuration are still required; protocol tests do not certify every IDE integration.
 
 ```bash
 safe-change mcp
@@ -293,7 +270,7 @@ safe-change rules add require-tests-pass
 | `max-deleted-files` | Blocks bulk accidental deletions (default: 10, error) |
 | `require-tests-pass` | Enforces that the check named `"test"` in your config passes (exit code 0, error) |
 
-Rule violations with `severity: error` set exit code 1, same as a regression. Built-in rules provide production defaults. Custom thresholds, custom target patterns, or custom check names can be configured by editing `.safe-change/rules.json` or passing a JSON rule file via `safe-change rules add <file.json>`. See [docs/rules.md](docs/rules.md) for full rule condition specifications.
+Rule violations with `severity: error` set exit code 1, same as a regression. Built-in defaults are configurable guardrails, not a production-safety certification. Custom thresholds, custom target patterns, or custom check names can be configured by editing `.safe-change/rules.json` or passing a JSON rule file via `safe-change rules add <file.json>`. See [docs/rules.md](docs/rules.md) for full rule condition specifications.
 
 <br/>
 
@@ -301,93 +278,15 @@ Rule violations with `severity: error` set exit code 1, same as a regression. Bu
 
 <br/>
 
-## Local dashboard
+## Safety model and execution trust
 
-```bash
-safe-change dashboard
-# Dashboard running at http://localhost:4242
-# Press Ctrl+C to stop.
-```
+**Experimental preview, not a sandbox against an equal-privilege actor.** An agent or human with the same OS-user permissions can modify or delete `.safe-change/`, including audit state. Review [SECURITY.md](SECURITY.md) before relying on any integrity feature.
 
-Fully offline. Binds to `127.0.0.1` only — never exposed to the network.
-
-**Port configuration:**
-
-```bash
-# Override via CLI flag
-safe-change dashboard --port 8080
-```
-
-Or set this property in `.safe-change.json`:
-
-```json
-{ "dashboardPort": 8080 }
-```
-
-If the configured port is already in use, the server exits with an error. Choose an available port and retry.
-
-**Enterprise Architecture & Features:**
-
-- **Brand Mark `/SAFE-CHANGE`**: Minimalist developer-grade typography matching the Apple Liquid Glass design system.
-- **6 Hero Metric Cards**: Real-time System State, Monitored Baseline, Enterprise Risk & Mode (0-100 score), Change Budget Bounds, Active Write Lease, and Tamper-Evident Audit & Trust Chain.
-- **6 Interactive Segmented Tabs**:
-  - `Overview & Baseline`: Baseline status, active rules, interactive regression timeline, and persistent log history.
-  - `Enterprise Risk & Budget`: Risk score gauge meter, real-time signal classification, and diff bounds checks.
-  - `AST Semantic Security`: Deep AST syntax inspection, breaking export detection, and public API surface protection.
-  - `Verifiable Replay & Attestations`: In-toto RFC 8785 Ed25519-signed attestation envelopes and deterministic replay sessions.
-  - `Identity & Trust Registry`: Authorized approver identities, public keys, and multi-sig quorum status.
-  - `Tamper-Evident Audit Chain`: SHA-256 cryptographic chain integrity verification and immutable audit event stream.
-- **Offline Telemetry API**: Read-only JSON endpoints (`/api/status`, `/api/log`, `/api/config`, `/api/rules`, `/api/enterprise`, `/api/lease`, `/api/audit`, `/api/identity`, `/api/verifiable`).
-- Full dashboard documentation in [docs/dashboard.md](docs/dashboard.md).
-
-<br/>
-
----
-
-<br/>
-
-## Verification integrity
-
-These changes describe current source. They are not automatically included in an older published npm package; check the approved release/commit.
-
-Use `safe-change check --strict --json` for a verified-only CI/agent gate. Plain
-`check` retains its no-new-regression exit contract and can exit 0 with a
-`failed` or `not-verified` status. MCP `safe_change_check` supports `strict: true`.
-
-Checks now bind their reports to Git-visible source, baseline, and environment
-digests; input mutation during execution invalidates verification. Conventional
-test files and configured command scripts are protected from unnoticed changes.
-Add custom oracle paths using `protectedVerificationPaths`. Stale evidence is
-explicitly downgraded to `not-verified`, and semantic diff includes deletions.
-
-See [Documentation status](docs/documentation-status.md) for current versus historical references.
-
-See [Verification integrity and strict gates](docs/verification-integrity.md)
-for migration, conservative test-review behavior, and trust/coverage limits.
-These controls do not make unrestricted same-user agent execution tamper-proof.
-
-## Safety model
-
-safe-change is built to never be the cause of a regression.
-
-| Guarantee | Detail |
-|---|---|
-| No silent Git mutations | Never runs `git commit`, `git stash`, `git reset`, or `git clean` |
-| Scoped writes | Core verification stores local state; init, installer and explicit export commands can write files. Configured checks can modify files and run with your user privileges. |
-| No telemetry | Zero outbound network calls. Fully offline. |
-| No shell expansion | Commands are spawned directly. No shell interpolation. |
-| No AI dependency | No model, no API key, no account required |
-| Bounded execution | Configurable timeouts on all check processes |
-
-> **Security Warning — Configuration Trust Boundary:** `.safe-change.json` specifies executable commands and arguments that safe-change invokes during `save` and `check`. While safe-change uses direct process spawning without shell expansion (mitigating shell injection), commands execute with your current user privileges. Treat `.safe-change.json` with the same scrutiny as a `Makefile`, `package.json` scripts, or CI workflow — **never run `safe-change save` or `safe-change check` on untrusted or unreviewed configurations from third-party pull requests.**
-
-See [SECURITY.md](SECURITY.md) for trust boundaries and vulnerability reporting.
-
-<br/>
-
----
-
-<br/>
+- Configured checks are executable code running with your user's privileges unless a separately configured, available isolation provider restricts them. Review `.safe-change.json`, scripts, test oracles and Git configuration before execution.
+- The dashboard's local status API is not an outbound telemetry service. Configured checks, package managers, or an opened browser can independently use the network; a loopback bind does not impose host-wide network isolation.
+- Baselines are comparisons, not backups. A passing result only covers the configured checks and captured inputs, not every possible regression.
+- Direct executable/argument spawning is not a blanket command-injection guarantee; a configured executable can itself be a shell or interpreter.
+- Keep independent backups and trusted external records where loss or equal-user tampering matters.
 
 ## Exit codes
 
@@ -410,7 +309,79 @@ See [SECURITY.md](SECURITY.md) for trust boundaries and vulnerability reporting.
 
 <br/>
 
+## Opt-in advanced policy and integrity layer — Experimental
+
+The core loop above does not require PDP/PEP concepts, signing keys, approval workflows, or enterprise configuration. Enable these mechanisms only after reviewing their configuration and trust boundaries.
+
+### Maturity labels
+
+These labels describe assurance, not whether source code exists. **Experimental** means limited validation and **not yet independently verified**. **Beta** would mean a defined, tested scope with remaining validation gaps. **Stable** additionally requires committed unit and integration coverage, an adversarial test, and a current review of open security issues. No advanced subsystem is assigned Stable or Beta in this pass; absence of such a label is not an assertion that it has no tests.
+
+| Feature / command | Maturity | Important limit |
+|---|---|---|
+| Risk engine and `assess` | Experimental | A policy score is not a probability of safety or proof of complete regression detection |
+| Enterprise policy, budgets and anti-policy-downgrade signals | Experimental | Configured gates and heuristics do not prove every unsafe change is detected |
+| Capability decisions and `authorize` | Experimental | A decision is only enforced by a cooperating caller |
+| Approval requests, grants, signed approvals and identity registry | Experimental | Local workflow state and key trust require independent review; not authenticated IDE consent |
+| Detached policy-root signature and `policy verify` | Experimental | Signature validity is not a review of policy safety or of the trust-root distribution |
+| Write lease and workspace fingerprint | Experimental | Cooperative coordination and compared digests, not an OS permission boundary |
+| Evidence bundle and `evidence` | Experimental | Local checksums are not an independent witness or a source backup |
+| Local audit chain and `audit verify` | Experimental | Local digest consistency is not immutable storage; an equal-privilege writer can replace state |
+| AST heuristics and `semantic-diff` | Experimental | Narrow syntactic patterns; precision/recall on a labeled corpus is not yet established here |
+| Replay recording, metadata comparison and optional reexecution | Experimental | Matching recorded metadata does not prove reproducible execution of arbitrary programs |
+| Ed25519 signing, DSSE/in-toto-shaped envelopes and `attest` | Experimental | Not yet independently reviewed for cryptographic/protocol conformance; verify the exact evidence and trust root |
+| Streaming secret-output filter | Experimental | Pattern-based filtering is not complete secret discovery or data-loss prevention |
+| Local dashboard and local status API | Experimental | Inspection of local artifacts does not authenticate a producer or establish fresh verification |
+| Command allowlist / optional OS sandbox provider | Experimental | Configured commands are trusted code; unavailable isolation must not be treated as a sandbox |
+
+See [SECURITY.md](SECURITY.md), [verification limits](docs/verification-integrity.md), and [verifiable execution usage](docs/verifiable-execution.md). These labels do not announce an external audit or a stabilization period.
+
+### Advanced command reference
+
+| Command | Purpose |
+|---|---|
+| `assess` | Inspect risk signals and configured budgets |
+| `lease acquire <session> <agent>` / `lease status` / `lease release <session>` | Cooperative write coordination |
+| `fingerprint` / `fingerprint check` | Record or compare workspace/environment digests |
+| `evidence <session>` | Export a checksummed local evidence bundle |
+| `audit verify` | Check the remaining local event chain |
+| `authorize <capability> <resource> <agent> <session> [approval]` | Return a policy decision for the caller to enforce |
+| `approval request` / `approval grant` / `approval status` | Manage local approval workflows |
+| `policy verify` | Verify a configured detached policy signature |
+| `semantic-diff [--base <ref>]` | Run the supported AST/JSON heuristics |
+| `replay record <session>` / `replay verify <file>` | Record/compare metadata; `--reexecute` requests a separate rerun |
+| `attest create <session>` / `attest verify <file>` | Sign or verify an evidence statement |
+| `identity keygen` / `identity register` / `identity list` | Manage local approver keys |
+| `approval sign <req>` / `approval verify` | Sign or verify approval requests |
+
+## Local dashboard and local status API
+
+```bash
+safe-change dashboard --no-open
+```
+
+The server binds to IPv4 loopback `127.0.0.1`, not an external interface. The read-only local status API consists of `/api/status`, `/api/log`, `/api/config`, `/api/rules`, `/api/enterprise`, `/api/lease`, `/api/audit`, `/api/identity`, and `/api/verifiable`. These are local inspection endpoints, not a telemetry upload service. Their displayed artifacts do not independently certify current source or a fresh verification run.
+
+Binding implementation: [LOCALHOST_HOST and startDashboardServer](src/dashboard/server.ts). Runtime assertion: [Dashboard server — binds only to 127.0.0.1](tests/unit/dashboard-server.test.ts). A loopback bind is not authentication against other local users/processes, nor a guarantee against an operator's reverse proxy or port forwarding.
+
+Set a port with `--port 8080` or `dashboardPort` in `.safe-change.json`. An explicit occupied port is an error. See [dashboard routes and boundaries](docs/dashboard.md).
+
+## Experimental task sessions (unreleased source)
+
+Task-scoped change contracts, interactive verification-timing choices, a separately started polling observer, and cooperative edit/finish gates are available in source. Observation is not verification, and installing a skill does not launch a watcher. The Claude-compatible hook adapter is protocol-tested, not live-IDE certified. See [task sessions](docs/task-sessions.md) and the [nine-repository reference ledger](docs/reference-adaptation.md).
+
+## Experimental quality layer (unreleased source)
+
+`safe-change quality scan --json` runs narrow original code/UI heuristics, not a universal design/security audit. `quality profile` prints reviewed external-tool setup/check templates without installing or running them. `quality report sarif|playwright --file <repo-relative.json>` assesses report contents without authenticating their producer or freshness. `quality gate --file quality-policy.json` is a post-check delivery gate requiring current strict evidence for named checks.
+
+See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-repository audit](docs/quality-reference-audit.md), and [policy example](examples/quality/quality-policy.json). ORT/ScanCode/Cosign/Scorecard/CodeQL require project-specific policy integration; scanners and live browser checks are not automatically installed or certified. No source from restricted better-web-ui was copied.
+
+## Developer preview 1.1.0-preview.1
+
+Experimental opt-in preview, not a general-availability safety certification. The guarded [GitHub preview workflow](.github/workflows/preview.yml) publishes a prerelease only after same-commit validation; it does not publish npm packages or replace stable `latest`. Use the GitHub release tarball with `--omit=optional` for the tested TypeScript fallback route. See [installation, actual validation and known gaps](docs/preview-validation.md). Native IDE consent remains unverified.
 ## Documentation
+
+See [how to read validation evidence](docs/validation-evidence.md) for commit-scoped CI proof and the distinction between incomplete runs and passing verification.
 
 | File | Contents |
 |---|---|
@@ -422,7 +393,7 @@ See [SECURITY.md](SECURITY.md) for trust boundaries and vulnerability reporting.
 | [docs/rules.md](docs/rules.md) | Safety rules reference |
 | [docs/dashboard.md](docs/dashboard.md) | Local enterprise dashboard reference |
 | [docs/verifiable-execution.md](docs/verifiable-execution.md) | Verifiable execution guide (AST semantic diff, replay, attestations, sandbox, identity) |
-| [docs/verifiable-execution-architecture.md](docs/verifiable-execution-architecture.md) | High-assurance verifiable execution architecture specification |
+| [docs/verifiable-execution-architecture.md](docs/verifiable-execution-architecture.md) | Historical verifiable execution architecture specification |
 | [docs/persistent-log.md](docs/persistent-log.md) | Persistent safety log |
 | [docs/runtime-verification.md](docs/runtime-verification.md) | Multi-agent runtime verification matrix |
 | [docs/enterprise-rollout.md](docs/enterprise-rollout.md) | Enterprise rollout and acceptance guide |
@@ -528,12 +499,3 @@ Copyright © 2026 ZACK.PRATAMA — PT ZYNTRIX ARTIFICIAL INTELLIGENCE INDONESIA 
 
 </div>
 
-## Experimental quality layer (unreleased source)
-
-`safe-change quality scan --json` runs narrow original code/UI heuristics, not a universal design/security audit. `quality profile` prints reviewed external-tool setup/check templates without installing or running them. `quality report sarif|playwright --file <repo-relative.json>` assesses report contents without authenticating their producer or freshness. `quality gate --file quality-policy.json` is a post-check delivery gate requiring current strict evidence for named checks.
-
-See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-repository audit](docs/quality-reference-audit.md), and [policy example](examples/quality/quality-policy.json). ORT/ScanCode/Cosign/Scorecard/CodeQL require project-specific policy integration; scanners and live browser checks are not automatically installed or certified. No source from restricted better-web-ui was copied.
-
-## Developer preview 1.1.0-preview.1
-
-Experimental opt-in preview, not a general-availability safety certification. The guarded [GitHub preview workflow](.github/workflows/preview.yml) publishes a prerelease only after same-commit validation; it does not publish npm packages or replace stable `latest`. Use the GitHub release tarball with `--omit=optional` for the tested TypeScript fallback route. See [installation, actual validation and known gaps](docs/preview-validation.md). Native IDE consent remains unverified.
