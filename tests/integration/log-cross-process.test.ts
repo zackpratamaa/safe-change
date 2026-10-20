@@ -71,7 +71,7 @@ describe("log writers in separate processes", () => {
     const exited = new Promise<number | null>((resolve, reject) => { child.once("exit", resolve); child.once("error", reject); });
     return { child, ready, exited, stderr: () => stderr };
   }
-  it("preserves all 48 distinct appends from six simultaneous writers", async () => {
+  it.each([1, 2, 3])("preserves all 48 distinct appends from six simultaneous writers (round %s)", async () => {
     const workers = Array.from({ length: 6 }, (_, i) => start(String(i)));
     expect(await Promise.all(workers.map(worker => worker.ready))).toEqual(Array(6).fill("ready"));
     for (const worker of workers) worker.child.send("go");

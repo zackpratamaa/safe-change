@@ -40,7 +40,10 @@ async function acquire(repoRoot: string, name: string, path: string, timeoutMs: 
       if (!code(error, "EEXIST")) throw error;
       try {
         const existing = await lstat(path);
-        if (!existing.isFile() || existing.isSymbolicLink() || existing.nlink !== 1) {
+        // A lookup racing the previous owner's unlink can observe a regular inode
+        // with no links. This is only a contention observation, never ownership:
+        // keep the same deadline and retry exclusive creation below.
+        if (!existing.isFile() || existing.isSymbolicLink() || (existing.nlink !== 0 && existing.nlink !== 1)) {
           throw new StateLockError("State lock must be a regular, singly linked file. Existing path was preserved.");
         }
       } catch (inspectionError) {
