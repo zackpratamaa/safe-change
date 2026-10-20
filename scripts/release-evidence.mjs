@@ -35,8 +35,9 @@ function cli(args) {
   const result = spawnSync(process.execPath, ["dist/cli.js", ...args, "--json"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   let report; try { report = JSON.parse(result.stdout ?? ""); } catch { /* no raw output in diagnostics */ }
   if (result.error || result.status !== 0) {
-    console.error(JSON.stringify({ stage: args[0], exitCode: result.status, errorCode: result.error?.code,
-      verification: report?.verification, checks: report?.results?.map(check => ({ name: check.name, result: check.result, exitCode: check.exitCode, timedOut: check.timedOut, outputBlocked: check.outputBlocked })) }));
+    const diagnostic = JSON.stringify({ stage: args[0], exitCode: result.status, errorCode: result.error?.code,
+      verification: report?.verification, checks: report?.results?.map(check => ({ name: check.name, result: check.result, exitCode: check.exitCode, timedOut: check.timedOut, outputBlocked: check.outputBlocked, detectedSecretTypes: check.detectedSecretTypes })) });
+    console.error(`::error title=Release self-check failed::${diagnostic.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")}`);
     throw new Error(`Release self-check stage ${args[0]} failed; no verified archive produced`);
   }
   return report;
@@ -70,5 +71,5 @@ export async function generateReleaseEvidence(env = process.env) {
   } finally { await rm(staging, { recursive: true, force: true }); }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  generateReleaseEvidence().catch(error => { console.error(error.message); process.exitCode = 1; });
+  generateReleaseEvidence().catch(error => { console.error(`::error title=Release evidence refused::${error.message.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")}`); process.exitCode = 1; });
 }
