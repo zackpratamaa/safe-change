@@ -7,6 +7,7 @@ import {
   type DashboardServerInstance,
 } from "../../src/dashboard/server.js";
 import { renderDashboardHtml } from "../../src/dashboard/template.js";
+import type { LogEntry } from "../../src/types/index.js";
 
 describe("Dashboard Security, Stored XSS Remediation & CSP Hardening", () => {
   let tempDir: string;
@@ -162,16 +163,20 @@ describe("Dashboard Security, Stored XSS Remediation & CSP Hardening", () => {
           timestamp: "2026-10-15T00:00:00.000Z",
           trigger: "cli",
           description: `Log with ${xssPayload}`,
-          fileSummary: { added: 1, modified: 0, deleted: 0 },
+          baselineId: "xss-regression-baseline",
+          durationMs: 0,
+          fileSummary: { added: 1, modified: 0, deleted: 0, unchanged: 0 },
           regressionDetected: false,
           checkResults: [
             {
               name: `chk-${xssPayload}`,
               result: "pass-pass",
+              before: "pass",
+              now: "pass",
             },
           ],
         },
-      ];
+      ] satisfies LogEntry[];
 
       await writeFile(join(scDir, "log.json"), JSON.stringify(logEntries));
 
@@ -181,6 +186,7 @@ describe("Dashboard Security, Stored XSS Remediation & CSP Hardening", () => {
       });
 
       const res = await fetch(`${serverInstance.url}/api/log`);
+      expect(res.status).toBe(200);
       const logs = await res.json();
       expect(logs).toHaveLength(1);
       expect(logs[0].description).toContain("<script>");

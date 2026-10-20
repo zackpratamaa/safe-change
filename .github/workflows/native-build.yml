@@ -15,7 +15,7 @@ jobs:
     name: Build & Test (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
