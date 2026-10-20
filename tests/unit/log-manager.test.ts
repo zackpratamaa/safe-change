@@ -140,7 +140,7 @@ describe("Log manager", () => {
     expect(Number.isNaN(parsed)).toBe(false);
   });
 
-  it("log is not corrupted if write is interrupted (simulated partial write)", async () => {
+  it("preserves corrupt history until an explicit clear is requested", async () => {
     const validEntry = makeSampleEntry({ description: "clean entry" });
     await appendEntry(validEntry, tempDir);
 
@@ -151,6 +151,10 @@ describe("Log manager", () => {
     expect(Array.isArray(recovered)).toBe(true);
     expect(recovered).toEqual([]);
 
+    await expect(appendEntry(makeSampleEntry({ description: "recovered entry" }), tempDir))
+      .rejects.toThrow(/preserv/i);
+    expect(await readFile(logPath, "utf-8")).toBe('{"broken": [partial json...');
+    await clearLog(tempDir);
     await appendEntry(makeSampleEntry({ description: "recovered entry" }), tempDir);
     const afterRecovery = await readEntries(tempDir);
     expect(afterRecovery).toHaveLength(1);

@@ -1,150 +1,61 @@
 # Persistent Safety Log
 
-The persistent safety log records every baseline creation and verification check executed by human developers and AI coding agents. It provides an auditable historical trail of codebase evolution, verification results, and regression occurrences without modifying source control tracking.
+The local safety log records baseline/check summaries in `.safe-change/log.json`. It is operational history, not authenticated verification evidence or the separate tamper-evident event chain.
 
-## Overview
+These descriptions follow current source; older published versions may differ. Keep `.safe-change/` ignored and review already tracked files. The tool does not automatically remove tracked state or its Git history.
 
-When developers or agents run `safe-change save` or `safe-change check`, safe-change captures telemetry about Git commits, branch context, file modification counts, test suite outcomes, and execution latency. This data is appended to a local history log, allowing developers to inspect whether regressions occurred during an agent session, view historical pass/fail rates, and audit agent-driven modifications over time.
+## Actual storage format
 
-## Storage Format
-
-Log records are stored in a single JSON file located at:
-
-```
-.safe-change/log.json
-```
-
-Because `.safe-change/` is excluded from version control, the log remains local to your working repository.
-
-### File Schema
-
-The storage structure follows schema version 1:
+The file is a **JSON array**, not a versioned object containing an `entries` field:
 
 ```json
-{
-  "version": 1,
-  "retentionMaxEntries": 100,
-  "entries": [
-    {
-      "id": "c1f7a28e-5b12-4d3a-96e1-88f192b8d001",
-      "timestamp": "2026-09-28T02:30:00.000Z",
-      "trigger": "cli",
-      "baselineId": "a1b2c3d4e5f678901234567890abcdef12345678",
-      "gitBranch": "main",
-      "description": "Baseline before authentication refactor",
-      "checkResults": [
-        {
-          "name": "lint",
-          "result": "pass-pass",
-          "before": "pass",
-          "now": "pass",
-          "durationMs": 1420
-        },
-        {
-          "name": "unit-tests",
-          "result": "pass-fail",
-          "before": "pass",
-          "now": "fail",
-          "durationMs": 4820
-        }
-      ],
-      "filesChanged": {
-        "modified": 4,
-        "added": 1,
-        "deleted": 0,
-        "unchanged": 128
-      },
-      "regressionDetected": true,
-      "durationMs": 6240
-    }
-  ]
-}
+[
+  {
+    "id": "c1f7a28e-5b12-4d3a-96e1-88f192b8d001",
+    "timestamp": "2026-10-20T02:30:00.000Z",
+    "trigger": "cli",
+    "baselineId": "baseline-identifier",
+    "description": "Before refactor",
+    "checkResults": [
+      { "name": "build", "result": "pass-pass", "before": "pass", "now": "pass" }
+    ],
+    "fileSummary": { "added": 0, "modified": 1, "deleted": 0, "unchanged": 128 },
+    "regressionDetected": false,
+    "durationMs": 1420
+  }
+]
 ```
 
-### Entry Attributes
+Each entry contains a UUID, timestamp, optional description, baseline identifier, origin (`cli`, `mcp` or `manual`), check comparisons, file summary, regression flag and nullable duration. It does not store a separate `gitBranch` or per-check `durationMs` field. Consult the `LogEntry` and `LogCheckResult` TypeScript types for the complete result vocabulary.
 
-- `id`: Unique identifier (UUID v4) for the entry.
-- `timestamp`: ISO-8601 UTC timestamp of the operation.
-- `trigger`: Origin of the execution (`"cli"`, `"mcp"`, or `"manual"`).
-- `baselineId`: Target baseline identifier or Git commit SHA recorded.
-- `gitBranch`: Name of the active Git branch during execution.
-- `description`: Human-readable summary supplied during `save` or generated during `check`.
-- `checkResults`: Detailed outcome for each configured command (`result`, `before`, `now`, and runtime in milliseconds).
-- `filesChanged`: Count of files modified, added, deleted, and unchanged.
-- `regressionDetected`: Boolean indicating whether any check transitioned to failure or a blocking rule was violated.
-- `durationMs`: Total wall-clock execution duration in milliseconds.
-
-## CLI Usage
-
-The `safe-change log` command displays, filters, exports, and clears log history.
-
-### Default View
-
-Display the 10 most recent entries in chronological terminal format:
+## CLI usage
 
 ```bash
+# Default: last 10 entries
 safe-change log
-```
 
-### Specific Count
-
-Inspect the last N entries using `--last`:
-
-```bash
+# Select a display count or the entire history
 safe-change log --last 5
-safe-change log -l 20
-```
-
-### Full History
-
-Display all logged entries across the entire project history:
-
-```bash
-safe-change log --all
-safe-change log -a
-```
-
-### JSON Output
-
-Output log entries in structured JSON format for scripting, CI pipelines, or downstream processing:
-
-```bash
-safe-change log --json
 safe-change log --all --json
-```
 
-### Exporting Log Entries
-
-Export log records directly to a standalone file:
-
-```bash
+# Export all readable stored entries; destination parent must already exist
 safe-change log --export ./reports/safety-audit.json
-```
 
-The exported file contains the full array of selected log entries without modifying the underlying log file.
-
-### Clearing Log History
-
-Clear existing log records when starting a fresh release cycle or cleaning local development artifacts:
-
-```bash
+# Explicitly discard history
 safe-change log --clear
 ```
 
-In interactive terminal environments, safe-change prompts for user confirmation before clearing. For automated scripts and CI environments, pass the non-interactive flag:
+Clear asks for confirmation when stdin is an interactive TTY unless `--non-interactive` is passed. Non-TTY callers must therefore treat `--clear` as destructive; they must not assume a confirmation prompt will appear.
 
 ```bash
-safe-change log --clear -n
 safe-change log --clear --non-interactive
 ```
 
-## Retention Policy
+Exports are explicit writes to the caller-selected destination. Review that path and its parent permissions; the private internal-state writer does not sandbox arbitrary export paths.
 
-To prevent unbounded disk consumption, safe-change automatically rotates log entries using a FIFO (first-in, first-out) policy when entries exceed the configured retention limit.
+## Retention
 
-- The default retention limit is **100 entries**.
-- When an operation appends the 101st entry, the oldest entry is removed atomically.
-- You can customize the retention limit by setting `"logRetention"` in your `.safe-change.json`:
+Append retains the newest 100 entries by default. Set `logRetention` in configuration to choose a positive integer:
 
 ```json
 {
@@ -156,12 +67,12 @@ To prevent unbounded disk consumption, safe-change automatically rotates log ent
 }
 ```
 
-For aggressive CI workflows or large team projects, set `logRetention` higher (e.g. 500 or 1000) to preserve extended audit history.
+In-process log mutation is serialized. Independent processes still need single-writer coordination. Atomic replacement alone is not a multi-process transaction.
 
-## Export and Backup
+## Integrity and recovery
 
-Because `.safe-change/log.json` is not committed to Git, backing up or transferring logs across machines can be achieved by:
+Append, update, prune and export refuse malformed/unreadable history and preserve the original file. Only an explicit clear can deliberately replace malformed contents. Do not delete or clear a damaged file before preserving evidence you need.
 
-1. Running `safe-change log --export <path>` to archive history into build artifacts.
-2. Incorporating `safe-change log --json` into CI pipelines to publish verification telemetry to artifact storage.
-3. Querying the log programmatically via the `safe_change_log` tool in MCP-enabled agents.
+For backward compatibility, the display API returns an empty array if reading fails. A blank dashboard or `log` display therefore does **not** distinguish missing from corrupt history. Mutation/export failures provide the explicit diagnostic instead.
+
+Baseline/log reads and writes reject linked state paths and files larger than 64 MiB; new state files request private permissions and use exclusive temporary files. See [state storage boundaries and recovery](state-storage.md) for exact coverage, Windows ACL limits and the remaining same-user race/cross-process limitations.

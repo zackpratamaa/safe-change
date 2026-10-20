@@ -1,4 +1,3 @@
-import { mkdir, readFile, rename, writeFile, unlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type {
@@ -12,6 +11,8 @@ import type {
   WorkspaceFingerprint,
 } from "../types/index.js";
 import { captureWorkspaceFingerprint } from "../integrity/fingerprint.js";
+import { readStateFile, writeStateFileAtomically } from "../security/state-files.js";
+import { hasTrackedState, isStateIgnored } from "../git/state-ignore.js";
 
 const STATE_DIR = ".safe-change";
 const BASELINE_FILE = "baseline.json";
@@ -57,8 +58,6 @@ export async function saveBaseline(
   checks: readonly CheckResult[],
   config: SafeChangeConfig
 ): Promise<string> {
-  const stateDir = join(repoRoot, STATE_DIR);
-  await mkdir(stateDir, { recursive: true });
   const workspaceFingerprint = await captureWorkspaceFingerprint(
     repoRoot,
     config
@@ -77,18 +76,10 @@ export async function saveBaseline(
   };
 
   const content = JSON.stringify(baseline, null, 2) + "\n";
-  const baselinePath = join(stateDir, BASELINE_FILE);
-  const tempPath = baselinePath + ".tmp." + process.pid + "." + Date.now();
-
+  let baselinePath: string;
   try {
-    await writeFile(tempPath, content, "utf-8");
-    await rename(tempPath, baselinePath);
+    baselinePath = await writeStateFileAtomically(repoRoot, BASELINE_FILE, content);
   } catch (err: unknown) {
-    try {
-      await unlink(tempPath);
-    } catch {
-      // Ignore cleanup failure
-    }
     throw new BaselineError(
       `Failed to write baseline: ${err instanceof Error ? err.message : String(err)}`
     );
@@ -109,11 +100,10 @@ export async function loadBaseline(
 
   let raw: string;
   try {
-    raw = await readFile(baselinePath, "utf-8");
+    const stored = await readStateFile(repoRoot, BASELINE_FILE);
+    if (stored === null) return null;
+    raw = stored;
   } catch (err: unknown) {
-    if (isNodeError(err) && err.code === "ENOENT") {
-      return null;
-    }
     throw new BaselineError(
       `Failed to read baseline: ${err instanceof Error ? err.message : String(err)}`
     );
@@ -132,23 +122,10 @@ export async function loadBaseline(
   return validateBaseline(parsed, baselinePath);
 }
 
-/**
- * Check if .safe-change/ is listed in .gitignore. Does not modify .gitignore.
- */
-export async function isStateExcludedFromGit(
-  repoRoot: string
-): Promise<boolean> {
-  const gitignorePath = join(repoRoot, ".gitignore");
-
+/** Confirm effective Git exclusion and absence of already tracked state. */
+export async function isStateExcludedFromGit(repoRoot: string): Promise<boolean> {
   try {
-    const content = await readFile(gitignorePath, "utf-8");
-    const lines = content.split(/\r?\n/);
-    return lines.some(
-      (line) =>
-        line.trim() === ".safe-change/" ||
-        line.trim() === ".safe-change" ||
-        line.trim() === ".safe-change/**"
-    );
+    return !(await hasTrackedState(repoRoot)) && await isStateIgnored(repoRoot);
   } catch {
     return false;
   }
@@ -328,6 +305,3 @@ function validateBaseline(data: unknown, filePath: string): Baseline {
   };
 }
 
-function isNodeError(err: unknown): err is NodeJS.ErrnoException {
-  return err instanceof Error && "code" in err;
-}
