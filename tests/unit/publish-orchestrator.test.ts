@@ -10,10 +10,12 @@ describe("scripts/publish-orchestrator.mjs", () => {
   });
 
   describe("ACTIVE_TARGETS", () => {
-    it("contains exactly the four active native compilation targets", () => {
-      expect(ACTIVE_TARGETS).toHaveLength(4);
+    it("contains exactly the six active native compilation targets", () => {
+      expect(ACTIVE_TARGETS).toHaveLength(6);
       expect(ACTIVE_TARGETS).toEqual([
         "linux-x64-gnu",
+        "linux-arm64-gnu",
+        "linux-x64-musl",
         "win32-x64-msvc",
         "darwin-arm64",
         "darwin-x64",

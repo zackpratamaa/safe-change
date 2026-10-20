@@ -3,7 +3,7 @@ import { createServer, type Server, type IncomingMessage, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { spawn } from "node:child_process";
+export { openBrowser } from "./browser.js";
 import { loadBaseline } from "../baseline/manager.js";
 import { readEntriesStrict } from "../log/log-manager.js";
 import { loadConfig } from "../config/loader.js";
@@ -275,32 +275,6 @@ export async function createDashboardServer(
   });
 
   return server;
-}
-
-export function openBrowser(url: string): void {
-  try {
-    let command: string;
-    let args: string[];
-
-    if (process.platform === "win32") {
-      command = "cmd.exe";
-      args = ["/c", "start", "", url];
-    } else if (process.platform === "darwin") {
-      command = "open";
-      args = [url];
-    } else {
-      command = "xdg-open";
-      args = [url];
-    }
-
-    const child = spawn(command, args, {
-      detached: true,
-      stdio: "ignore",
-    });
-    child.unref();
-  } catch {
-    // If opening browser fails, continue without error
-  }
 }
 
 export async function startDashboardServer(

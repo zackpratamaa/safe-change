@@ -96,10 +96,12 @@ describe("scripts/preflight-npm.mjs", () => {
   });
 
   describe("PACKAGES_TO_VERIFY list", () => {
-    it("includes root package and all four active native targets", () => {
-      expect(PACKAGES_TO_VERIFY).toHaveLength(5);
+    it("includes root package and all six active native targets", () => {
+      expect(PACKAGES_TO_VERIFY).toHaveLength(7);
       expect(PACKAGES_TO_VERIFY).toContain("safe-change");
       expect(PACKAGES_TO_VERIFY).toContain("@safe-change/linux-x64-gnu");
+      expect(PACKAGES_TO_VERIFY).toContain("@safe-change/linux-arm64-gnu");
+      expect(PACKAGES_TO_VERIFY).toContain("@safe-change/linux-x64-musl");
       expect(PACKAGES_TO_VERIFY).toContain("@safe-change/win32-x64-msvc");
       expect(PACKAGES_TO_VERIFY).toContain("@safe-change/darwin-arm64");
       expect(PACKAGES_TO_VERIFY).toContain("@safe-change/darwin-x64");

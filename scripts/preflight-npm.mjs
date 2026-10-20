@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 export const PACKAGES_TO_VERIFY = [
   "safe-change",
   "@safe-change/linux-x64-gnu",
+  "@safe-change/linux-arm64-gnu",
+  "@safe-change/linux-x64-musl",
   "@safe-change/win32-x64-msvc",
   "@safe-change/darwin-arm64",
   "@safe-change/darwin-x64",

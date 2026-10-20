@@ -264,4 +264,26 @@ describe("scripts/sync-version.mjs", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("package.json not found");
   });
+  it("checks and synchronizes private napi metadata and both new target manifests", () => {
+    createMockRepository(testDir, "0.3.1");
+    const napiPath = join(testDir, "crates", "safe-change-native", "package.json");
+    writeFileSync(napiPath, JSON.stringify({ name: "safe-change-native", private: true, version: "0.1.0" }));
+    for (const target of ["linux-arm64-gnu", "linux-x64-musl"]) {
+      const dir = join(testDir, "npm", target);
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: `@safe-change/${target}`, version: "0.1.0" }));
+    }
+    const check = spawnSync(process.execPath, [SCRIPT_PATH, "--check"], { cwd: testDir, encoding: "utf8" });
+    expect(check.status).toBe(1);
+    expect(check.stderr).toContain("crates/safe-change-native/package.json");
+    expect(check.stderr).toContain("linux-arm64-gnu");
+    expect(check.stderr).toContain("linux-x64-musl");
+    const sync = spawnSync(process.execPath, [SCRIPT_PATH, "0.4.0"], { cwd: testDir, encoding: "utf8" });
+    expect(sync.status, sync.stderr).toBe(0);
+    expect(JSON.parse(readFileSync(napiPath, "utf8"))).toEqual({ name: "safe-change-native", private: true, version: "0.4.0" });
+    for (const target of ["linux-arm64-gnu", "linux-x64-musl"]) {
+      expect(JSON.parse(readFileSync(join(testDir, "npm", target, "package.json"), "utf8")).version).toBe("0.4.0");
+    }
+    expect(spawnSync(process.execPath, [SCRIPT_PATH, "--check"], { cwd: testDir }).status).toBe(0);
+  });
 });

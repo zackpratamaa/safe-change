@@ -91,6 +91,21 @@ safe-change --version
 
 > The package declares Node.js ≥ 18. Clean-package CI currently exercises Node.js 22 and 24; the declared minimum is not a claim of equivalent CI coverage. Java verification additionally requires a JDK. Native binaries are optional; see the preview guide for the tested fallback route.
 
+### Native platform targets — unreleased source
+
+The source build/release configuration and optional dependencies include these six targets. This is not a claim that a new package has already been published or that every Linux distribution is certified.
+
+| OS | Architecture | Runtime / target | Optional package |
+|---|---|---|---|
+| Linux | x64 | glibc / `linux-x64-gnu` | `@safe-change/linux-x64-gnu` |
+| Linux | arm64 | glibc / `linux-arm64-gnu` | `@safe-change/linux-arm64-gnu` |
+| Linux | x64 | musl / `linux-x64-musl` | `@safe-change/linux-x64-musl` |
+| Windows | x64 | MSVC / `win32-x64-msvc` | `@safe-change/win32-x64-msvc` |
+| macOS | arm64 | `darwin-arm64` | `@safe-change/darwin-arm64` |
+| macOS | x64 | `darwin-x64` | `@safe-change/darwin-x64` |
+
+The two newly activated targets were built and their exact native modules exercised in [ARM GNU CI](https://github.com/zackpratamaa/safe-change/actions/runs/39499524939/job/118893172656) and [musl Alpine CI](https://github.com/zackpratamaa/safe-change/actions/runs/39499524939/job/118893172888) at commit `b4b19c293d73db98bf6bf26ef36ed6158e8dfc53`. These are commit-scoped observations, not approval of subsequent edits or npm publication. The [native verifier](scripts/verify-built-native.mjs) rejects a wrong host/libc/version and directly exercises both built and staged binaries before the application loader; fallback cannot substitute for that proof. The musl binary is built in Alpine and separately executed in an Alpine Node container. Missing desktop openers no longer raise an uncaught asynchronous error in headless fallback tests; [regression tests](tests/unit/dashboard-browser.test.ts) cover that case.
+
 <br/>
 
 ---

@@ -58,11 +58,15 @@ jobs:
     needs: preflight
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: linux-x64-gnu
+          - os: ubuntu-24.04-arm
+            target: linux-arm64-gnu
+          - os: ubuntu-latest
+            target: linux-x64-musl
           - os: windows-latest
             target: win32-x64-msvc
           - os: macos-latest
@@ -97,7 +101,8 @@ jobs:
         run: npm run build
 
       - name: Verify TypeScript fallback without native binary
-        run: npm test
+        run: bash scripts/ci-fallback-test.sh
+        shell: bash
         env:
           SAFE_CHANGE_NATIVE_DISABLED: "1"
 
@@ -108,9 +113,7 @@ jobs:
         shell: bash
 
       - name: Build Native Module for ${{ matrix.target }}
-        run: |
-          cd crates/safe-change-native
-          npx napi build --platform --release
+        run: bash scripts/ci-native-build.sh ${{ matrix.target }}
         shell: bash
 
       - name: Verify generated native binary exists
@@ -119,9 +122,20 @@ jobs:
         shell: bash
 
       - name: Verify native module load and execution
+        if: matrix.target != 'linux-x64-musl'
         run: |
           node scripts/verify-built-native.mjs ${{ matrix.target }}
           npx vitest run tests/native/
+        shell: bash
+
+      - name: Execute musl native binary and native tests in Alpine
+        if: matrix.target == 'linux-x64-musl'
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace node:22-alpine sh -ec '
+            npm ci
+            node scripts/verify-built-native.mjs linux-x64-musl
+            npx vitest run tests/native/
+          '
         shell: bash
 
       - name: Upload native artifact for ${{ matrix.target }}

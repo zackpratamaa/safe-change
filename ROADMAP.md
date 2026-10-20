@@ -95,7 +95,7 @@ All subsystems in this historical block are Experimental and not yet independent
 - Ed25519 approval identity trust registry and multi-party signing (Done)
 - Enterprise Liquid Glass Dashboard with `/SAFE-CHANGE` brand mark, 6 Hero Metrics, and 6 Segments (Done)
 - Embedded read-only local status API endpoints (Implemented; Experimental)
-- Four targets configured in active native CI and root optional dependencies: linux-x64-gnu, win32-x64-msvc, darwin-arm64 and darwin-x64. Additional package manifests alone do not establish working distribution.
+- Six targets configured in native CI, release builds and root optional dependencies: linux-x64-gnu, linux-arm64-gnu, linux-x64-musl, win32-x64-msvc, darwin-arm64 and darwin-x64. ARM GNU and Alpine musl exact-binary execution passed at a specific commit; see the [platform table and CI proof](README.md#native-platform-targets--unreleased-source). This does not announce npm publication or universal distribution support.
 - Security policy and release workflow source exist; support-version drift, independently reviewed security assurance and release-specific evidence require separate validation.
 
 ---
