@@ -39,6 +39,11 @@ async function stateDirectory(repoRoot: string, create: boolean): Promise<string
   return directory;
 }
 
+/** Validate/create the private state directory without following a linked leaf. */
+export async function ensureStateDirectory(repoRoot: string): Promise<string> {
+  return (await stateDirectory(repoRoot, true))!;
+}
+
 async function inspectFile(path: string) {
   try {
     const info = await lstat(path);

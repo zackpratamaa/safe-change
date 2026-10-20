@@ -4,6 +4,9 @@ import { randomUUID } from "node:crypto";
 import type { LogEntry } from "../types/index.js";
 import { readStateFile, writeStateFileAtomically } from "../security/state-files.js";
 
+import { withStateLock } from "../security/state-lock.js";
+import { isLogEntry } from "./schema.js";
+
 const LOG_FILE = "log.json";
 const DEFAULT_RETENTION = 100;
 const mutations = new Map<string, Promise<void>>();
@@ -28,12 +31,12 @@ export function createLogEntry(params: Omit<LogEntry, "id" | "timestamp"> & { id
   };
 }
 
-async function readForMutation(repoRoot: string): Promise<LogEntry[]> {
+export async function readEntriesStrict(repoRoot: string = process.cwd()): Promise<LogEntry[]> {
   try {
     const raw = await readStateFile(repoRoot, LOG_FILE);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.some(item => typeof item !== "object" || item === null || Array.isArray(item))) {
+    if (!Array.isArray(parsed) || parsed.some(item => !isLogEntry(item))) {
       throw new LogStorageError();
     }
     return parsed as LogEntry[];
@@ -42,15 +45,15 @@ async function readForMutation(repoRoot: string): Promise<LogEntry[]> {
 
 /** Compatibility display API: unreadable history is empty, never a mutation input. */
 export async function readEntries(repoRoot: string = process.cwd()): Promise<LogEntry[]> {
-  try { return await readForMutation(repoRoot); } catch { return []; }
+  try { return await readEntriesStrict(repoRoot); } catch { return []; }
 }
 
-/** Serializes this process only. Separate processes still require single-writer coordination. */
+/** In-process queue plus a bounded, cooperative cross-process state lock. */
 async function mutate(repoRoot: string, operation: (root: string) => Promise<void>): Promise<void> {
   const root = await realpath(resolve(repoRoot));
   const key = process.platform === "win32" ? root.toLowerCase() : root;
   const previous = mutations.get(key) ?? Promise.resolve();
-  const current = previous.catch(() => undefined).then(() => operation(root));
+  const current = previous.catch(() => undefined).then(() => withStateLock(root, "log-write.lock", () => operation(root)));
   mutations.set(key, current);
   try { await current; }
   finally { if (mutations.get(key) === current) mutations.delete(key); }
@@ -61,12 +64,13 @@ function retentionLimit(value: number): number {
 }
 
 async function writeEntries(repoRoot: string, entries: LogEntry[]): Promise<void> {
+  if (entries.some(item => !isLogEntry(item))) throw new LogStorageError();
   await writeStateFileAtomically(repoRoot, LOG_FILE, JSON.stringify(entries, null, 2) + "\n");
 }
 
 export async function appendEntry(entry: LogEntry, repoRoot: string = process.cwd(), retention: number = DEFAULT_RETENTION): Promise<void> {
   await mutate(repoRoot, async root => {
-    const entries = await readForMutation(root);
+    const entries = await readEntriesStrict(root);
     entries.push(entry);
     const limit = retentionLimit(retention);
     await writeEntries(root, entries.length > limit ? entries.slice(-limit) : entries);
@@ -76,7 +80,7 @@ export async function appendEntry(entry: LogEntry, repoRoot: string = process.cw
 export async function pruneToRetention(max: number, repoRoot: string = process.cwd()): Promise<void> {
   if (!Number.isSafeInteger(max) || max <= 0) return;
   await mutate(repoRoot, async root => {
-    const entries = await readForMutation(root);
+    const entries = await readEntriesStrict(root);
     if (entries.length > max) await writeEntries(root, entries.slice(-max));
   });
 }
@@ -87,13 +91,13 @@ export async function clearLog(repoRoot: string = process.cwd()): Promise<void> 
 }
 
 export async function exportLog(outputPath: string, repoRoot: string = process.cwd()): Promise<void> {
-  const entries = await readForMutation(repoRoot);
+  const entries = await readEntriesStrict(repoRoot);
   await writeFile(outputPath, JSON.stringify(entries, null, 2) + "\n", "utf-8");
 }
 
 export async function updateLastEntry(updates: Partial<LogEntry>, repoRoot: string = process.cwd()): Promise<void> {
   await mutate(repoRoot, async root => {
-    const entries = await readForMutation(root);
+    const entries = await readEntriesStrict(root);
     if (entries.length === 0) {
       entries.push(createLogEntry({
         description: updates.description ?? null, baselineId: updates.baselineId ?? "unknown",

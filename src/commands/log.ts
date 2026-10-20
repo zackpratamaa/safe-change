@@ -4,7 +4,7 @@ import { ExitCodes } from "../types/index.js";
 import { getRepositoryRoot } from "../git/inspector.js";
 import { renderError } from "../output/renderer.js";
 import {
-  readEntries,
+  readEntriesStrict,
   clearLog,
   exportLog,
 } from "../log/log-manager.js";
@@ -73,7 +73,11 @@ export async function runLog(options: LogCommandOptions): Promise<number> {
         rl.close();
       }
     }
-    await clearLog(repoRoot);
+    try { await clearLog(repoRoot); }
+    catch (error: unknown) {
+      process.stderr.write(renderError(format, `Failed to clear log: ${error instanceof Error ? error.message : String(error)}`, ExitCodes.INTERNAL_ERROR));
+      return ExitCodes.INTERNAL_ERROR;
+    }
     if (format === "json") {
       process.stdout.write(JSON.stringify({ cleared: true }, null, 2) + "\n");
     } else {
@@ -103,7 +107,12 @@ export async function runLog(options: LogCommandOptions): Promise<number> {
     }
   }
 
-  const entries = await readEntries(repoRoot);
+  let entries: LogEntry[];
+  try { entries = await readEntriesStrict(repoRoot); }
+  catch (error: unknown) {
+    process.stderr.write(renderError(format, `Failed to read log: ${error instanceof Error ? error.message : String(error)}`, ExitCodes.INTERNAL_ERROR));
+    return ExitCodes.INTERNAL_ERROR;
+  }
 
   if (entries.length === 0) {
     if (format === "json") {
