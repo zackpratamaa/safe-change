@@ -1,0 +1,35 @@
+name: Live Linux Sandbox
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  live-sandbox:
+    name: Required live bubblewrap isolation
+    # Explicit host for namespace validation; no global security restrictions are disabled.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      SAFE_CHANGE_REQUIRE_LIVE_SANDBOX: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.2.0
+        with:
+          node-version: 22.x
+          cache: npm
+      - name: Install bubblewrap
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+      - run: npm ci
+      - run: npm run lint
+      - name: Require real namespace and filesystem isolation
+        run: npx --no-install vitest run tests/unit/os-sandbox-enforcement.test.ts tests/integration/live-linux-isolation.test.ts
