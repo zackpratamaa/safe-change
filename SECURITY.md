@@ -4,31 +4,6 @@
 
 This source tree is **1.1.0-preview.1 — Experimental developer preview**, not a general-availability security certification. The version is declared in [package.json](package.json). No independent security review or soak/stabilization period is asserted by this document.
 
-## Threat Model
-
-**Equal-privilege actors are out of scope.** An agent or human with the same OS-user filesystem permissions as safe-change can read, modify, replace, or delete `.safe-change/`, including the audit log and baseline. They can rebuild a self-consistent digest chain. safe-change is a safety net for honest mistakes, not a sandbox against an actor with equal privileges. Local hashes, leases, and signatures whose trust root is also locally replaceable do not change that boundary.
-
-### In scope and assumptions
-
-- Regressions introduced by a well-behaved agent, to the extent the configured checks and guardrails can observe them. A passing test does not prove absence of regressions.
-- Accidental baseline corruption and retained-state modifications that violate the validated schema, recorded hashes, or digest links. There is no authenticated historical baseline simply because a JSON file is well formed.
-- Race conditions between cooperative sessions: the **write lease** coordinates cooperating writers; **workspace fingerprints** compare selected environment/configuration inputs. The safety-log state lock serializes its read/modify/write operations. These are distinct mechanisms, not a filesystem-wide lock or an atomic transaction over all state files.
-- Reviewed configuration, trusted check executables, and operating-system permissions appropriate for local development. Checks run as the invoking user; they may modify files or use the network.
-
-### Controls and explicit non-guarantees
-
-| Control | What it detects or coordinates | What it cannot detect or prevent |
-| :--- | :--- | :--- |
-| Write lease | A cooperating acquisition rejects a different session's unexpired recorded lease; malformed recorded lease data can be rejected. See [lease implementation](src/integrity/lease.ts) and [lease tests](tests/unit/integrity-core.test.ts). | It cannot prevent direct writes, deletion/replacement of the lease, or non-cooperating processes; it is not an OS sandbox or a universal multi-file transaction. |
-| Workspace fingerprint | Comparison reports changes in the recorded HEAD/branch/remote hash, selected configuration/rules/skill, discovered supported lockfiles, policy version, agent label, and runtime fields. See [fingerprint implementation](src/integrity/fingerprint.ts). | It is not a full source-tree snapshot, exhaustive dependency inventory, or authenticated reference; lockfile discovery excludes build/state directories and is depth-limited. Source binding is a separate [verification mechanism](src/integrity/verification-binding.ts). |
-| Evidence bundle | The manifest/checksums allow a consumer to compare recorded component bytes; creation downgrades missing/stale verification bindings rather than treating them as fresh. See [evidence implementation](src/integrity/evidence.ts) and [binding tests](tests/unit/verification-hardening.test.ts). | Creation does not independently re-verify a later-modified bundle. Replacing the bundle and all its checksums, or forging the locally stored inputs, cannot be detected without an independently trusted reference. It is not a source backup. |
-| `audit verify` | Validation checks the retained events' schema, sequence, previous-digest links, and event digests. See [audit implementation](src/integrity/audit-log.ts) and [retained-state corruption tests](tests/unit/audit-tampering.test.ts). | A consistent prefix after tail truncation, complete deletion, or a fully rebuilt chain is not distinguishable from legitimate history without a separately trusted head/count. An empty/missing log is not proof that no events ever existed. Payload digests do not reconstruct omitted payloads. |
-| `policy verify` | It checks the policy digest and Ed25519 signature against the public key supplied in the signature object. See [signature implementation](src/enforcement/policy-signature.ts) and [command acceptance logic](src/commands/policy.ts). | It does not independently pin that key to an organization, prevent an equal-privilege replacement of policy plus key, or prove policy safety. When `requireSignedPolicy` is false, the command may exit successfully with `valid: false`; inspect `valid`, `required`, and `accepted`, not exit status alone. |
-
-### Interpreting corruption and missing evidence
-
-Tests in [audit-tampering.test.ts](tests/unit/audit-tampering.test.ts) exercise retained-event edits, reordered/malformed entries, and command failure reporting. Tests in [state-tampering-check.test.ts](tests/integration/state-tampering-check.test.ts) exercise damaged baseline/rules state through the `check` command contract. The audit tests also preserve an explicit counterexample: a consistent truncated prefix or deleted log has no local historical witness. These tests bound the claims; they do not establish hostile same-user isolation or a completed third-party review.
-
 ## Supported versions
 
 | Version | Supported | Security Update Policy |
@@ -70,17 +45,16 @@ Platform note: On Windows systems, creation of symbolic links in tests or develo
 
 ### What safe-change writes
 
-Core commands write local state under `.safe-change/`, including the baseline, safety log/lock, rules, verification summaries, sessions, leases, audit events, identities/approvals, signing material when explicitly requested, and evidence/replay/attestation artifacts. This is not a universal allowlist for user-configured programs.
-
-1. Baseline storage (`save`):
+safe-change writes only to explicitly defined, isolated targets:
+1. Core CLI operations (`save`):
    - `.safe-change/baseline.json`: the baseline state file.
-   - Temporary staging files during atomic baseline writes (renamed or cleaned up).
+   - Temporary staging files during atomic writes (immediately renamed or cleaned up).
 2. Installer operations (`install`, `update`, `uninstall`):
    - Project scope: `<workspaceRoot>/.agents/skills/safe-change/` (including `SKILL.md` and `.safe-change-manifest.json`).
    - Global scope: `<homedir>/.gemini/config/skills/safe-change/` (strict allowlist under the user's home directory).
    - Temporary staging and rollback backup directories in system temporary storage (cleaned up upon completion or rollback).
 
-The core save/check/diff implementation does not intentionally rewrite source or Git history; configured programs execute separately with the user’s privileges. By default, `safe-change init` does not modify `.gitignore`; `.gitignore` is only modified when the user explicitly passes the `--update-gitignore` flag.
+safe-change never writes to `.git/` or any user source code files. By default, `safe-change init` does not modify `.gitignore`; `.gitignore` is only modified when the user explicitly passes the `--update-gitignore` flag.
 
 ### Process execution and tree termination
 
@@ -167,7 +141,7 @@ The safe-change installer manages agent skills under rigorous security boundarie
 - Reading a baseline and rendering a report does not execute repository-provided instructions.
 - Verification uses an explicit allowlist of user-configured commands with a documented execution model. No implicit execution of arbitrary package scripts.
 - Process execution has timeouts, output bounds, and clean termination behavior.
-- Baseline and safety-log storage use guarded atomic replacement; this is not a claim that every advanced subsystem uses an atomic multi-file transaction. Invalid retained baseline/rules/audit data is exercised by the corruption tests named in the Threat Model.
+- Local state writes use atomic temp-file-then-rename. Corrupted state produces an actionable error message.
 - No source code, diagnostics, or telemetry is uploaded.
 - No telemetry, cloud dependency, AI API key, or account is required.
 
