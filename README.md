@@ -23,6 +23,10 @@
 
 <br/>
 
+## Local readiness and state integrity (unreleased source)
+
+Run `safe-change doctor --json` to inspect local setup without executing project checks. Start with the [getting-started guide](docs/getting-started.md), [Java verification helper](docs/java-verification.md), and [state storage boundaries](docs/state-storage.md). Source changes are not automatically available in an older npm release.
+
 ## Experimental task sessions (unreleased source)
 
 Task-scoped change contracts, interactive verification-timing choices, a separately started polling observer, and cooperative edit/finish gates are available in source. Observation is not verification, and installing a skill does not launch a watcher. The Claude-compatible hook adapter is protocol-tested, not live-IDE certified. See [task sessions](docs/task-sessions.md) and the [nine-repository reference ledger](docs/reference-adaptation.md).
@@ -153,6 +157,7 @@ safe-change diff --stat
 
 | Command | What it does |
 |---|---|
+| `doctor [--json]` | Diagnose local setup without running project checks; not verification certification |
 | `init` | Auto-detect test runners, create `.safe-change.json` (use `--update-gitignore` to update `.gitignore`) |
 | `save [description]` | Run checks and record Git-visible inputs; reject input mutation |
 | `check [--strict]` | Compare with baseline; strict exits 0 only for verified status |
@@ -368,7 +373,7 @@ safe-change is built to never be the cause of a regression.
 | Guarantee | Detail |
 |---|---|
 | No silent Git mutations | Never runs `git commit`, `git stash`, `git reset`, or `git clean` |
-| No working tree writes | Reads and hashes files only — never modifies your project files |
+| Scoped writes | Core verification stores local state; init, installer and explicit export commands can write files. Configured checks can modify files and run with your user privileges. |
 | No telemetry | Zero outbound network calls. Fully offline. |
 | No shell expansion | Commands are spawned directly. No shell interpolation. |
 | No AI dependency | No model, no API key, no account required |
