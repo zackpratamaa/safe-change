@@ -6,7 +6,14 @@ log="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/safe-change-native.XXXXXX")"
 if (
   cd crates/safe-change-native || exit 1
   if [ "$1" = "linux-x64-musl" ]; then
-    CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc RUSTFLAGS="-C target-feature=-crt-static" npx napi build --platform --release --target x86_64-unknown-linux-musl
+    # Build against an actual musl userspace and its libgcc, not Ubuntu's
+    # glibc compiler runtime. Execution proof remains a separate Alpine step.
+    docker run --rm -v "$PWD/../..:/workspace" -w /workspace rust:1.90-alpine sh -ec '
+      apk add --no-cache nodejs npm build-base libgcc
+      npm ci
+      cd crates/safe-change-native
+      RUSTFLAGS="-C target-feature=-crt-static" npx napi build --platform --release
+    '
   else
     npx napi build --platform --release
   fi
