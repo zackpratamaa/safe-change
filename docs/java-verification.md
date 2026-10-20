@@ -17,14 +17,14 @@ Copy `tools/java/JavaSourceCheck.java` into the repository you want to verify, r
 
 Run `safe-change save "Java compilation passing"` before editing sources. Then run `safe-change check --strict`. A compilation error fails verification. Restore the source and reuse the same baseline to verify the repair.
 
-The checker writes compiled classes into a temporary directory and removes it afterward. It does not write `.class` files into your source tree, follow source symlinks, run annotation processors or execute compiled application code. Empty source directories and setup failures return exit 2 rather than a false pass; compilation errors return exit 1.
+The checker writes compiled classes into a temporary directory and removes it afterward. It does not write `.class` files into your source tree, follow symlinks encountered during source traversal, run annotation processors or execute compiled application code. Empty source directories and setup failures return exit 2 rather than a false pass; compilation errors return exit 1.
 
 ## Scope and limits
 
 - Supports JDK-only source trees compatible with Java 17. A newer JDK still compiles against the Java 17 API using `--release 17`.
 - This is compilation verification, not a unit-test runner, dependency resolver, sandbox or behavioral proof. Keep application tests as separate required checks.
 - Projects requiring external libraries, generated code, annotation processing, modules or framework build plugins should use their existing Maven/Gradle verification commands instead. Automatic Maven/Gradle detection has not been added.
-- The helper is currently a source-repository tool, not part of the npm tarball. Copy it into the target repository explicitly.
+- The helper ships in the npm tarball under `tools/java/JavaSourceCheck.java`. With a local installation, it is available at `node_modules/safe-change/tools/java/JavaSourceCheck.java`. Copy it into your repository if you want its contents directly bound as a Git-visible verification input. This source change must be released before registry installations receive it.
 - The CLI guards configured repository-local `.java` command inputs, Maven/Gradle build definitions and wrapper configuration against baseline drift. Changes require explicit baseline review. External JDK installations and ignored artifacts are not cryptographically bound by that protection.
 - Compilation does not make untrusted source safe. Existing OS sandbox requirements still apply; the checker does not substitute for them.
 

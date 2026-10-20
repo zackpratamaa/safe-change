@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { CheckDefinition, OutputFormat, SafeChangeConfig } from "../types/index.js";
 import { ExitCodes } from "../types/index.js";
 import { getRepositoryRoot } from "../git/inspector.js";
+import { isStateIgnored } from "../git/state-ignore.js";
 import { renderError } from "../output/renderer.js";
 
 export interface InitOptions {
@@ -159,15 +160,18 @@ export async function runInit(options: InitOptions = {}): Promise<number> {
   if (existsSync(gitignorePath)) {
     try {
       existingGitignore = await readFile(gitignorePath, "utf-8");
-      if (existingGitignore.includes(".safe-change")) {
-        gitignoreStatus = "already-ignored";
-      }
     } catch {
       if (options.updateGitignore) {
         process.stderr.write(renderError(format, "Cannot read existing gitignore; refusing to replace unknown content.", ExitCodes.CONFIG_ERROR));
         return ExitCodes.CONFIG_ERROR;
       }
     }
+  }
+
+  try {
+    if (await isStateIgnored(repoRoot)) gitignoreStatus = "already-ignored";
+  } catch {
+    // Never claim exclusion when Git cannot confirm it. The recommendation remains.
   }
 
   if (options.updateGitignore) {
@@ -220,7 +224,7 @@ export async function runInit(options: InitOptions = {}): Promise<number> {
     if (gitignoreStatus === "updated") {
       process.stdout.write("  Gitignore:   Added .safe-change/ to .gitignore\n");
     } else if (gitignoreStatus === "already-ignored") {
-      process.stdout.write("  Gitignore:   .safe-change/ is already excluded\n");
+      process.stdout.write("  Gitignore:   .safe-change/ is already excluded by Git ignore rules\n");
     } else {
       process.stdout.write("  Gitignore:   Unchanged. Recommendation: add '.safe-change/' to .gitignore\n");
     }
