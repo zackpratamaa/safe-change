@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createPublicKey, generateKeyPairSync, sign } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTempRepo, type TempRepo } from "../helpers/temp-repo.js";
@@ -468,6 +468,12 @@ describe("Enforcement Core", () => {
 
   it("executes runPolicySign to sign and write policySignature to .safe-change.json", async () => {
     const originalCwd = process.cwd();
+    // Capture this disposable key-generating CLI response inside the test. Do not
+    // leak generated private-key material into the suite/coverage stdout.
+    const output: string[] = [];
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(chunk => {
+      output.push(String(chunk)); return true;
+    });
     process.chdir(repo.path);
     try {
       const config = {
@@ -494,11 +500,18 @@ describe("Enforcement Core", () => {
       expect(written.policySignature).toBeDefined();
       expect(written.policySignature.keyId).toBe("owner-key-1");
       expect(written.policySignature.algorithm).toBe("ed25519");
+      const signedOutput = JSON.parse(output.join(""));
+      expect(signedOutput.success).toBe(true);
+      expect(typeof signedOutput.generatedPrivateKeyPem).toBe("string");
+      expect(createPublicKey(signedOutput.generatedPrivateKeyPem).export({ type: "spki", format: "pem" }).toString()).toBe(written.policySignature.publicKeyPem);
+      output.length = 0;
 
       // Verify with runPolicyVerify
       const verifyCode = await runPolicyVerify({ format: "json" });
       expect(verifyCode).toBe(0);
+      expect(JSON.parse(output.join("")).valid).toBe(true);
     } finally {
+      stdout.mockRestore();
       process.chdir(originalCwd);
     }
   });
