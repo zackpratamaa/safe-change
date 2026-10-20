@@ -48,7 +48,16 @@ describe("public measured coverage publication", () => {
     const call = fetchImpl.mock.calls.find(c => c[0].endsWith("/git/trees"))!;
     expect(JSON.parse((call[1] as unknown as { body: string }).body).tree.every((f: { path: string }) => f.path.startsWith(`reports/${sha}/`))).toBe(true);
   });
-  it("fails rather than claiming publication when permissions or ref writes fail", async () => {
+  it("propagates a rejected report-branch write even after all reads and tree creation succeeded", async () => {
+    const normal = transport(true);
+    const fetchImpl = vi.fn(async (url: string, options: { method: string }) => {
+      if (options.method === "PATCH") return response({}, 403);
+      return normal(url, options);
+    });
+    await expect(publishCoverage({ env, summary: summary(), configText: "config", fetchImpl })).rejects.toThrow("HTTP 403");
+    expect(fetchImpl.mock.calls.some(call => call[1].method === "PATCH")).toBe(true);
+  });
+  it("fails rather than claiming publication when API access is denied", async () => {
     const fetchImpl = vi.fn(async () => response({}, 403));
     await expect(publishCoverage({ env, summary: summary(), configText: "config", fetchImpl })).rejects.toThrow("HTTP 403");
   });
