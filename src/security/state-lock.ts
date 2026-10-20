@@ -10,7 +10,7 @@ export class StateLockError extends Error {
 }
 export class StateLockTimeoutError extends StateLockError {
   constructor() {
-    super("Another writer holds the state lock; no mutation was started by this operation. Stop or finish other writers and retry. Never delete a lock until all possible owners are stopped.");
+    super("State lock acquisition timed out (contention or Windows filesystem access/sharing); no mutation was started by this operation. Stop or finish other writers and retry. Never delete a lock until all possible owners are stopped.");
     this.name = "StateLockTimeoutError";
   }
 }
@@ -19,6 +19,13 @@ interface OwnedLock { identity: Identity; record: string }
 
 function code(error: unknown, expected: string): boolean {
   return error instanceof Error && "code" in error && error.code === expected;
+}
+
+// Windows may report a delete-pending/sharing observation as EPERM/EACCES,
+// not EEXIST/ENOENT. Treat it only as a bounded acquisition failure: ownership
+// still requires successful wx creation. A permanent denial times out closed.
+function windowsAcquisitionConflict(error: unknown): boolean {
+  return process.platform === "win32" && (code(error, "EPERM") || code(error, "EACCES"));
 }
 
 async function release(repoRoot: string, name: string, path: string, identity: Identity, expectedRecord?: string): Promise<void> {
@@ -37,7 +44,7 @@ async function acquire(repoRoot: string, name: string, path: string, timeoutMs: 
     let handle;
     try { handle = await open(path, "wx", 0o600); }
     catch (error) {
-      if (!code(error, "EEXIST")) throw error;
+      if (!code(error, "EEXIST") && !windowsAcquisitionConflict(error)) throw error;
       try {
         const existing = await lstat(path);
         // A lookup racing the previous owner's unlink can observe a regular inode
@@ -47,7 +54,7 @@ async function acquire(repoRoot: string, name: string, path: string, timeoutMs: 
           throw new StateLockError("State lock must be a regular, singly linked file. Existing path was preserved.");
         }
       } catch (inspectionError) {
-        if (!code(inspectionError, "ENOENT")) throw inspectionError;
+        if (!code(inspectionError, "ENOENT") && !windowsAcquisitionConflict(inspectionError)) throw inspectionError;
       }
       const remaining = timeoutMs - (performance.now() - started);
       if (remaining <= 0) throw new StateLockTimeoutError();
