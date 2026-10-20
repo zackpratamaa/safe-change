@@ -1488,7 +1488,7 @@ export function renderDashboardHtml(nonce?: string): string {
           fetch('/api/rules').then(r => r.json()).catch(() => []),
           fetch('/api/enterprise').then(r => r.json()).catch(() => null),
           fetch('/api/lease').then(r => r.json()).catch(() => ({ active: false })),
-          fetch('/api/audit').then(r => r.json()).catch(() => ({ verified: true, totalEvents: 0, events: [] })),
+          fetch('/api/audit').then(r => { if (!r.ok) throw new Error('Audit status unavailable'); return r.json(); }).catch(() => ({ verified: false, unavailable: true, totalEvents: 0, events: [] })),
           fetch('/api/identity').then(r => r.json()).catch(() => ({ version: 1, identities: [] })),
           fetch('/api/verifiable').then(r => r.json()).catch(() => ({ semanticReport: null, attestations: [], replays: [] }))
         ]);
@@ -1615,10 +1615,10 @@ export function renderDashboardHtml(nonce?: string): string {
       const auditSub = document.getElementById('stat-audit-sub');
       if (audit) {
         auditEl.textContent = (audit.totalEvents || 0) + ' events';
-        auditSub.textContent = audit.verified ? 'Local digest links consistent' : 'Integrity broken';
+        auditSub.textContent = audit.unavailable ? 'Audit status unavailable' : (audit.verified ? 'Local digest links consistent' : 'Integrity check failed');
       } else {
         auditEl.textContent = '0 events';
-        auditSub.textContent = 'Audit log initialized';
+        auditSub.textContent = 'Audit status unavailable';
       }
     }
 
@@ -2178,20 +2178,20 @@ export function renderDashboardHtml(nonce?: string): string {
       if (countBadge) countBadge.textContent = (audit.totalEvents || 0) + ' Events';
       if (integBadge) {
         integBadge.className = audit.verified ? 'badge badge-clean' : 'badge badge-regression';
-        integBadge.textContent = audit.verified ? 'CHAIN INTEGRITY VERIFIED (PASS)' : (audit.corrupted ? 'AUDIT LOG CORRUPTED (FAIL)' : 'CHAIN INTEGRITY COMPROMISED (FAIL)');
+        integBadge.textContent = audit.unavailable ? 'AUDIT STATUS UNAVAILABLE' : (audit.verified ? 'LOCAL DIGEST LINKS CONSISTENT' : (audit.corrupted ? 'AUDIT LOG CORRUPTED (FAIL)' : 'DIGEST CHECK FAILED'));
       }
 
       if (!tbody) return;
       const events = audit.events || [];
 
       if (events.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No audit log entries found. All repository checks and write leases are recorded here.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No retained audit events are available. This does not prove that no earlier events existed.</td></tr>';
         return;
       }
 
       tbody.innerHTML = events.map(ev => {
-        const prev = String(ev.previousHash || ev.prevHash || '00000000');
-        const curr = String(ev.hash || ev.currentHash || '--------');
+        const prev = String(ev.previousDigest || '00000000');
+        const curr = String(ev.eventDigest || '--------');
         const type = String(ev.type || ev.action || 'EVENT');
         const linkBadge = audit.verified
           ? '<span class="badge badge-clean">VALID LINK</span>'
@@ -2200,7 +2200,7 @@ export function renderDashboardHtml(nonce?: string): string {
           <tr>
             <td class="mono" style="color: var(--text-caption); font-size: 11px;">\${escapeHtml(ev.timestamp || 'now')}</td>
             <td><span class="badge badge-info mono">\${escapeHtml(type)}</span></td>
-            <td><strong style="color: var(--text-main);">\${escapeHtml(ev.actor || 'system')}</strong></td>
+            <td><strong style="color: var(--text-main);">\${escapeHtml(ev.sessionId || 'system')}</strong></td>
             <td><code class="hash-pill">\${escapeHtml(curr.slice(0, 12))}...</code></td>
             <td><code class="hash-pill" style="color: var(--text-caption);">\${escapeHtml(prev.slice(0, 12))}...</code></td>
             <td>\${linkBadge}</td>

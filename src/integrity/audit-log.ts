@@ -33,10 +33,25 @@ export async function readAuditEvents(repoRoot: string): Promise<AuditEvent[]> {
   return events;
 }
 
-export function verifyAuditEvents(events: readonly AuditEvent[]): boolean {
+function isAuditEvent(value: unknown): value is AuditEvent {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const event = value as Record<string, unknown>;
+  const digest = (input: unknown): input is string =>
+    typeof input === "string" && /^sha256:[a-f0-9]{64}$/.test(input);
+  return event["schemaVersion"] === 1 &&
+    Number.isSafeInteger(event["sequence"]) && Number(event["sequence"]) > 0 &&
+    typeof event["timestamp"] === "string" && Number.isFinite(Date.parse(event["timestamp"])) &&
+    typeof event["type"] === "string" && event["type"].length > 0 &&
+    (event["sessionId"] === null || typeof event["sessionId"] === "string") &&
+    digest(event["payloadDigest"]) && digest(event["eventDigest"]) &&
+    (event["previousDigest"] === null || digest(event["previousDigest"]));
+}
+
+export function verifyAuditEvents(events: readonly unknown[]): boolean {
   let previousDigest: string | null = null;
   for (let index = 0; index < events.length; index++) {
-    const event = events[index]!;
+    const event = events[index];
+    if (!isAuditEvent(event)) return false;
     if (event.sequence !== index + 1 || event.previousDigest !== previousDigest) {
       return false;
     }
