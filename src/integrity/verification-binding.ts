@@ -44,10 +44,11 @@ export function changedVerificationInputs(
   const commandFiles = new Set(config.checks.flatMap(check => [check.executable, ...check.args])
     .map(arg => isAbsolute(arg) ? relative(repoRoot, arg) : arg)
     .map(arg => arg.replace(/\\/g, "/").replace(/^\.\//, ""))
-    .filter(arg => !arg.startsWith("../") && /\.(?:[cm]?js|tsx?|jsx|py|sh|ps1)$/.test(arg)));
+    .filter(arg => !arg.startsWith("../") && /\.(?:[cm]?js|tsx?|jsx|py|sh|ps1|java)$/.test(arg)));
   const names = new Set([...Object.keys(baseline.files), ...Object.keys(current)]);
   return [...names].filter(name => {
-    const runnerConfiguration = /(^|\/)(package\.json|Makefile|pyproject\.toml|Cargo\.toml|pytest\.ini|tox\.ini|setup\.cfg|\.nycrc(?:\.json)?|(?:vitest|jest|playwright|cypress)\.config\.[^/]+)$/i.test(name) ||
+    const runnerConfiguration = /(^|\/)(package\.json|Makefile|pyproject\.toml|Cargo\.toml|pytest\.ini|tox\.ini|setup\.cfg|\.nycrc(?:\.json)?|pom\.xml|(?:build|settings)\.gradle(?:\.kts)?|gradle\.(?:properties|lockfile)|mvnw(?:\.cmd)?|gradlew(?:\.bat)?|(?:vitest|jest|playwright|cypress)\.config\.[^/]+)$/i.test(name) ||
+      /(^|\/)(\.mvn\/|gradle\/wrapper\/)/i.test(name) ||
       /^\.github\/workflows\//.test(name);
     const protectedInput = runnerConfiguration ||
       /(^|\/)(__tests__|tests?|specs?)(\/|$)/i.test(name) ||
