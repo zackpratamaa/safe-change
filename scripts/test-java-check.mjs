@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -58,9 +58,8 @@ try {
   run(java, ['tools/JavaSourceCheck.java', 'empty'], 2);
   run(java, ['tools/JavaSourceCheck.java', 'does-not-exist'], 2);
   run(java, ['tools/JavaSourceCheck.java'], 2);
-  assert.deepEqual((await import('node:fs/promises')).readdir
-    ? (await (await import('node:fs/promises')).readdir(join(project, 'src'))).sort()
-    : [], ['Greeting.java']);
+  assert.deepEqual((await readdir(join(project, 'src'))).sort(), ['Greeting.java']);
+  assert.deepEqual((await readdir(join(project, 'tools'))).sort(), ['JavaSourceCheck.java']);
   console.log('PASS: Java baseline, compile regression, repair, checker drift, invalid inputs and no class-file pollution');
 } finally {
   await rm(project, { recursive: true, force: true });
