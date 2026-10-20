@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { loadBaseline } from "../baseline/manager.js";
-import { readEntries } from "../log/log-manager.js";
+import { readEntriesStrict } from "../log/log-manager.js";
 import { loadConfig } from "../config/loader.js";
 import { renderDashboardHtml } from "./template.js";
 
@@ -84,7 +84,7 @@ export async function createDashboardServer(
 
     if (url.pathname === "/api/log") {
       try {
-        const entries = await readEntries(repoRoot);
+        const entries = await readEntriesStrict(repoRoot);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(entries));
       } catch {

@@ -67,12 +67,16 @@ Append retains the newest 100 entries by default. Set `logRetention` in configur
 }
 ```
 
-In-process log mutation is serialized. Independent processes still need single-writer coordination. Atomic replacement alone is not a multi-process transaction.
+Log mutations use both an in-process queue and a cooperative cross-process `log-write.lock` on the local filesystem. Independent cooperating processes wait up to 10 seconds rather than silently overwriting another writer. A crashed writer leaves its marker for explicit offline recovery; locks never auto-expire or get stolen. This is not a distributed or repository-wide transaction.
 
 ## Integrity and recovery
 
 Append, update, prune and export refuse malformed/unreadable history and preserve the original file. Only an explicit clear can deliberately replace malformed contents. Do not delete or clear a damaged file before preserving evidence you need.
 
-For backward compatibility, the display API returns an empty array if reading fails. A blank dashboard or `log` display therefore does **not** distinguish missing from corrupt history. Mutation/export failures provide the explicit diagnostic instead.
+CLI listing exits with code 5 for corrupt/unreadable history rather than printing a successful empty array. The dashboard `/api/log` responds with HTTP 500 and the MCP log tool returns `isError: true`. Missing history remains a successful empty array. Entries are validated against the public shape; unknown extension fields are preserved, but missing/wrongly typed fields and invalid counts, durations or check states/results are rejected.
 
-Baseline/log reads and writes reject linked state paths and files larger than 64 MiB; new state files request private permissions and use exclusive temporary files. See [state storage boundaries and recovery](state-storage.md) for exact coverage, Windows ACL limits and the remaining same-user race/cross-process limitations.
+Only the low-level legacy `readEntries` API keeps its tolerant empty-on-error behavior for compatibility. Use `readEntriesStrict` for integrations that need to distinguish corruption from absence.
+
+If `log-write.lock` remains after a crash, first stop and verify the exit of every possible writer. Back up and inspect the state, then remove only that abandoned marker while writers remain stopped. Age and PID alone are not sufficient evidence that a lock is abandoned. See the recovery steps below before retrying.
+
+Baseline/log reads and writes reject linked state paths and files larger than 64 MiB; new state files request private permissions and use exclusive temporary files. See [state storage boundaries and recovery](state-storage.md) for exact coverage, Windows ACL limits and the remaining same-user race and distributed-filesystem limitations.
