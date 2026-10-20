@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import { mkdtemp, rm, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
@@ -14,13 +14,15 @@ import type {
 import { enforcementPolicyDigest } from "../enforcement/policy-signature.js";
 import { getGitState } from "../git/inspector.js";
 import {
-  hashFileIfExists,
   normalizeReplayOutput,
   repositoryIdentityDigest,
 } from "./recorder.js";
 import { executeCheck } from "../runner/executor.js";
 import { captureWorkspaceFingerprint } from "../integrity/fingerprint.js";
 import { stableStringify } from "../integrity/hash.js";
+
+import { getSandboxProvider } from "../sandbox/factory.js";
+import { hashReplayArtifact } from "./artifacts.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -42,7 +44,7 @@ export async function verifyReplayManifest(
   if (computedDigest !== manifestDigest) {
     mismatches.push({
       category: "NON_DETERMINISTIC_RESULT",
-      details: "Replay manifest digest signature mismatch (tampering detected)",
+      details: "Replay manifest content digest mismatch (not a signature or external trust anchor)",
       expected: manifestDigest,
       actual: computedDigest,
     });
@@ -53,7 +55,7 @@ export async function verifyReplayManifest(
   if (currentRepoHash !== manifest.repositoryHash) {
     mismatches.push({
       category: "REPOSITORY_DRIFT",
-      details: "Workspace directory path does not match replay manifest",
+      details: "Repository origin identity digest differs from replay manifest",
       expected: manifest.repositoryHash,
       actual: currentRepoHash,
     });
@@ -94,7 +96,7 @@ export async function verifyReplayManifest(
   for (const [lockFile, recordedHash] of Object.entries(
     manifest.lockfileHashes
   )) {
-    const currentHash = await hashFileIfExists(resolve(repoRoot, lockFile));
+    const currentHash = await hashReplayArtifact(repoRoot, lockFile);
     if (currentHash !== recordedHash) {
       mismatches.push({
         category: "DEPENDENCY_DRIFT",
@@ -159,9 +161,24 @@ export async function verifyReplayManifest(
     });
   }
 
+  const currentCapabilities = await getSandboxProvider().detectCapabilities().catch(() => null);
+  if (!manifest.sandboxCapabilities || !currentCapabilities ||
+      stableStringify(manifest.sandboxCapabilities) !== stableStringify(currentCapabilities)) {
+    mismatches.push({ category: "SANDBOX_CAPABILITY_DRIFT",
+      details: "Sandbox capability observations are missing, unavailable, or different; this does not prove policy enforcement." });
+  }
+  for (const recorded of manifest.recordedResults) {
+    for (const [path, expected] of Object.entries(recorded.artifactHashes)) {
+      const actual = await hashReplayArtifact(repoRoot, path);
+      if (actual !== expected) mismatches.push({ category: "ARTIFACT_DRIFT",
+        details: `Declared artifact '${path}' is missing, unsafe, or changed`, expected, actual: actual ?? "unavailable" });
+    }
+  }
+
+  // Re-execution is never authorized by a mismatched manifest.
   // 7. Optional Re-execution Verification
   const replayedResults: ReplayRecordedResult[] = [];
-  if (options?.reexecute) {
+  if (options?.reexecute && mismatches.length === 0) {
     const replayRoot = await mkdtemp(join(tmpdir(), "safe-change-replay-"));
     try {
       await execFileAsync(
@@ -169,15 +186,14 @@ export async function verifyReplayManifest(
         ["worktree", "add", "--detach", replayRoot, manifest.endingCommit],
         { cwd: repoRoot, maxBuffer: 10 * 1024 * 1024 }
       );
-      try {
-        await access(join(replayRoot, "package-lock.json"));
+      const hasNpmLock = await access(join(replayRoot, "package-lock.json")).then(() => true, () => false);
+      if (hasNpmLock) {
+        // Installation failures propagate; a broken install is not a non-npm project.
         await execFileAsync("npm", ["ci", "--ignore-scripts"], {
           cwd: replayRoot,
           maxBuffer: 20 * 1024 * 1024,
           timeout: 180_000,
         });
-      } catch {
-        // Non-npm repositories and checks that do not require dependencies remain valid.
       }
 
       for (const cmd of manifest.normalizedCommands) {
@@ -198,6 +214,13 @@ export async function verifyReplayManifest(
         const stdoutDigest = sha256(normalizeReplayOutput(res.stdout, replayRoot));
         const stderrDigest = sha256(normalizeReplayOutput(res.stderr, replayRoot));
 
+        const artifactHashes: Record<string, string> = {};
+        for (const [path, expected] of Object.entries(rec?.artifactHashes ?? {})) {
+          const actual = await hashReplayArtifact(replayRoot, path);
+          if (actual !== null) artifactHashes[path] = actual;
+          if (actual !== expected) mismatches.push({ category: "ARTIFACT_DRIFT",
+            details: `Re-executed artifact '${path}' is missing, unsafe, or changed`, expected, actual: actual ?? "unavailable" });
+        }
         replayedResults.push({
           name: res.name,
           exitCode: res.exitCode,
@@ -208,7 +231,7 @@ export async function verifyReplayManifest(
             outputBlocked: res.outputBlocked ?? false,
             detectedSecretTypes: res.detectedSecretTypes ? [...res.detectedSecretTypes] : [],
           },
-          artifactHashes: {},
+          artifactHashes,
           durationMs: res.durationMs,
         });
 
@@ -245,7 +268,9 @@ export async function verifyReplayManifest(
               actual: String(res.durationMs),
             });
           }
-          if (res.outputBlocked !== rec.secretRedactionState.outputBlocked) {
+          if ((res.outputBlocked ?? false) !== rec.secretRedactionState.outputBlocked ||
+              stableStringify([...(res.detectedSecretTypes ?? [])].sort()) !==
+              stableStringify([...rec.secretRedactionState.detectedSecretTypes].sort())) {
             mismatches.push({
               category: "SECRET_REDACTION_DRIFT",
               details: `Command '${cmd.name}' secret output redaction state mismatch`,

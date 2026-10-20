@@ -10,6 +10,8 @@ import { promisify } from "node:util";
 import { getGitState } from "../git/inspector.js";
 import { stableStringify } from "../integrity/hash.js";
 
+import { getSandboxProvider } from "../sandbox/factory.js";
+
 const execFileAsync = promisify(execFile);
 
 function sha256(content: string | Buffer): string {
@@ -81,14 +83,13 @@ export async function createReplayManifest(
     if (h) lockfileHashes[cand] = h;
   }
 
-  // Read Safe-Change package version
-  let safeChangeVersion = "1.0.0";
+  // Record the running tool's package, never the inspected application's version.
+  let safeChangeVersion = "unknown";
   try {
-    const pkgRaw = await readFile(resolve(repoRoot, "package.json"), "utf-8");
-    const pkg = JSON.parse(pkgRaw) as { version?: string };
-    if (pkg.version) safeChangeVersion = pkg.version;
+    const pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8")) as { version?: string };
+    if (typeof pkg.version === "string" && pkg.version.length > 0) safeChangeVersion = pkg.version;
   } catch {
-    // fallback
+    // Missing tool metadata remains unknown, not a fabricated release version.
   }
 
   const allowedEnvKeys =
@@ -139,6 +140,7 @@ export async function createReplayManifest(
     agentProfile,
     operatingSystem: process.platform,
     architecture: process.arch,
+    sandboxCapabilities: await getSandboxProvider().detectCapabilities().catch(() => null),
     runtimeVersions: {
       node: process.version,
     },

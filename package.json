@@ -47,7 +47,9 @@
     "version:check": "node scripts/sync-version.mjs --check",
     "release:validate": "node scripts/validate-release.mjs",
     "release:preflight": "node scripts/preflight-npm.mjs",
-    "release:dry-run": "node scripts/publish-orchestrator.mjs --dry-run"
+    "release:dry-run": "node scripts/publish-orchestrator.mjs --dry-run",
+    "test:semantic-corpus": "npm run build && node tests/benchmarks/semantic-corpus.mjs",
+    "test:replay-corpus": "vitest run tests/unit/replay-drift-corpus.test.ts"
   },
   "keywords": [
     "ai",
