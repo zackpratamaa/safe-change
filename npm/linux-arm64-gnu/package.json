@@ -12,5 +12,8 @@
   "files": [
     "safe-change-native.node"
   ],
-  "license": "AGPL-3.0-only"
+  "license": "AGPL-3.0-only",
+  "libc": [
+    "glibc"
+  ]
 }

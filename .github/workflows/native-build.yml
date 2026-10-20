@@ -21,6 +21,10 @@ jobs:
           - os: ubuntu-latest
             target: linux-x64-gnu
             pkg_name: "@safe-change/linux-x64-gnu"
+          - os: ubuntu-24.04-arm
+            target: linux-arm64-gnu
+          - os: ubuntu-latest
+            target: linux-x64-musl
           - os: windows-latest
             target: win32-x64-msvc
             pkg_name: "@safe-change/win32-x64-msvc"
@@ -51,6 +55,13 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
 
+      - name: Install musl cross-linker and Rust standard library
+        if: matrix.target == 'linux-x64-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes musl-tools
+          rustup target add x86_64-unknown-linux-musl
+
       - name: Install dependencies
         run: npm ci
 
@@ -71,7 +82,11 @@ jobs:
       - name: Build Native Module for ${{ matrix.target }}
         run: |
           cd crates/safe-change-native
-          npx napi build --platform --release
+          if [ "${{ matrix.target }}" = "linux-x64-musl" ]; then
+            CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc RUSTFLAGS="-C target-feature=-crt-static" npx napi build --platform --release --target x86_64-unknown-linux-musl
+          else
+            npx napi build --platform --release
+          fi
         shell: bash
 
       - name: Verify generated native binary exists
@@ -80,9 +95,20 @@ jobs:
         shell: bash
 
       - name: Verify native module load and execution
+        if: matrix.target != 'linux-x64-musl'
         run: |
           node scripts/verify-built-native.mjs ${{ matrix.target }}
           npx vitest run tests/native/
+        shell: bash
+
+      - name: Execute musl native binary and native tests in Alpine
+        if: matrix.target == 'linux-x64-musl'
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace node:22-alpine sh -ec '
+            npm ci
+            node scripts/verify-built-native.mjs linux-x64-musl
+            npx vitest run tests/native/
+          '
         shell: bash
 
       - name: Upload native artifact for ${{ matrix.target }}

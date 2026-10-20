@@ -80,7 +80,9 @@
     "@safe-change/darwin-arm64": "1.1.0-preview.1",
     "@safe-change/darwin-x64": "1.1.0-preview.1",
     "@safe-change/linux-x64-gnu": "1.1.0-preview.1",
-    "@safe-change/win32-x64-msvc": "1.1.0-preview.1"
+    "@safe-change/win32-x64-msvc": "1.1.0-preview.1",
+    "@safe-change/linux-arm64-gnu": "1.1.0-preview.1",
+    "@safe-change/linux-x64-musl": "1.1.0-preview.1"
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.10.5",

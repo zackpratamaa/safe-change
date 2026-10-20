@@ -107,6 +107,21 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
     }
   }
 
+  // The private napi build manifest must not drift from Cargo/root versions.
+  const napiPath = join(rootDir, "crates", "safe-change-native", "package.json");
+  if (existsSync(napiPath)) {
+    try {
+      const napi = JSON.parse(readFileSync(napiPath, "utf-8"));
+      if (napi.version !== expectedVersion) mismatches.push({
+        file: "crates/safe-change-native/package.json", target: "version",
+        expected: expectedVersion, found: napi.version,
+      });
+    } catch (error) {
+      mismatches.push({ file: "crates/safe-change-native/package.json", target: "parse",
+        expected: "valid JSON", found: error.message });
+    }
+  }
+
   // 4. npm platform packages
   const npmDir = join(rootDir, "npm");
   if (existsSync(npmDir)) {
@@ -227,6 +242,14 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
     cargoContent = cargoContent.replace(/^version\s*=\s*"[^"]+"/m, `version = "${resolvedVersion}"`);
     writeFileSync(cargoPath, cargoContent, "utf-8");
     updatedFiles.push(cargoPath);
+  }
+
+  const napiPath = join(rootDir, "crates", "safe-change-native", "package.json");
+  if (existsSync(napiPath)) {
+    const napi = JSON.parse(readFileSync(napiPath, "utf-8"));
+    napi.version = resolvedVersion;
+    writeFileSync(napiPath, JSON.stringify(napi, null, 2) + "\n", "utf-8");
+    updatedFiles.push(napiPath);
   }
 
   // 4. npm platform packages

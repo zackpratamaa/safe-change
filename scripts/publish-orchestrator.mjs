@@ -15,6 +15,8 @@ import { isValidSemver } from "./sync-version.mjs";
 
 export const ACTIVE_TARGETS = [
   "linux-x64-gnu",
+  "linux-arm64-gnu",
+  "linux-x64-musl",
   "win32-x64-msvc",
   "darwin-arm64",
   "darwin-x64",
