@@ -12,6 +12,7 @@
 [![npm version](https://img.shields.io/npm/v/safe-change?style=for-the-badge&logo=npm&color=CB3837&labelColor=0d1117)](https://www.npmjs.com/package/safe-change)
 [![npm downloads](https://img.shields.io/npm/dm/safe-change?style=for-the-badge&logo=npm&color=CB3837&labelColor=0d1117)](https://www.npmjs.com/package/safe-change)
 [![CI](https://img.shields.io/github/actions/workflow/status/zackpratamaa/safe-change/ci.yml?style=for-the-badge&logo=github-actions&label=CI&labelColor=0d1117)](https://github.com/zackpratamaa/safe-change/actions)
+[![Measured V8 source lines](https://raw.githubusercontent.com/zackpratamaa/safe-change/coverage-reports/coverage.svg)](https://github.com/zackpratamaa/safe-change/blob/coverage-reports/coverage-report.json)
 [![License](https://img.shields.io/badge/AGPL--3.0--only-blue?style=for-the-badge&logo=gnu&label=license&labelColor=0d1117)](LICENSE)
 [![Node](https://img.shields.io/badge/%3E%3D18.0.0-brightgreen?style=for-the-badge&logo=node.js&label=node&labelColor=0d1117)](https://nodejs.org)
 
@@ -327,7 +328,7 @@ These labels describe assurance, not whether source code exists. **Experimental*
 | Write lease and workspace fingerprint | Experimental | Cooperative coordination and compared digests, not an OS permission boundary |
 | Evidence bundle and `evidence` | Experimental | Local checksums are not an independent witness or a source backup |
 | Local audit chain and `audit verify` | Experimental | Local digest consistency is not immutable storage; an equal-privilege writer can replace state |
-| AST heuristics and `semantic-diff` | Experimental | Narrow syntactic patterns; precision/recall on a labeled corpus is not yet established here |
+| AST heuristics and `semantic-diff` | Experimental | Narrow syntactic patterns; rerun the labeled corpus and inspect its known false negatives, not a production-accuracy claim |
 | Replay recording, metadata comparison and optional reexecution | Experimental | Matching recorded metadata does not prove reproducible execution of arbitrary programs |
 | Ed25519 signing, DSSE/in-toto-shaped envelopes and `attest` | Experimental | Not yet independently reviewed for cryptographic/protocol conformance; verify the exact evidence and trust root |
 | Streaming secret-output filter | Experimental | Pattern-based filtering is not complete secret discovery or data-loss prevention |
@@ -379,6 +380,15 @@ See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-rep
 ## Developer preview 1.1.0-preview.1
 
 Experimental opt-in preview, not a general-availability safety certification. The guarded [GitHub preview workflow](.github/workflows/preview.yml) publishes a prerelease only after same-commit validation; it does not publish npm packages or replace stable `latest`. Use the GitHub release tarball with `--omit=optional` for the tested TypeScript fallback route. See [installation, actual validation and known gaps](docs/preview-validation.md). Native IDE consent remains unverified.
+## Measured verification scope
+
+The coverage badge links to measured V8 source-line coverage with its exact source SHA, Actions run, numerators/denominators, and committed include/exclude configuration. It is published only after the main CI test matrix and tarball smoke test succeed. It is not all-file coverage, an independent review, or a guarantee of security; inspect the report SHA rather than assuming a cached badge represents current HEAD.
+
+- `npm run test:semantic-corpus` builds the actual heuristic engine and reports the confusion matrix, precision and recall for hand-labeled synthetic regression idioms and benign refactors. Known misses remain regression labels in the recall denominator. This small corpus is not a production incident dataset or an independent benchmark.
+- `npm run test:replay-corpus` exercises one isolated fixture per declared drift category, plus matching/unsafe-path/preflight counterexamples. Unit fixtures control external Git/execution/capability observations; they do not establish hermetic replay of arbitrary applications.
+
+See [verification rigor and reproducible limits](docs/verification-rigor.md). Advanced mechanisms remain Experimental.
+
 ## Documentation
 
 See [how to read validation evidence](docs/validation-evidence.md) for commit-scoped CI proof and the distinction between incomplete runs and passing verification.

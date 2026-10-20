@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "provenance": "Authored synthetic minimal examples of common regression patterns; labels are human review inputs, not production incident or independent benchmark evidence",
+  "cases": [
+    {
+      "id": "authorization-guard-removed",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "export function read(authorized) { if (!authorized) throw new Error(\"denied\"); return load(); }",
+      "after": "export function read(authorized) { return load(); }",
+      "expectedCategory": "guard-inversion"
+    },
+    {
+      "id": "catch-swallowed",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "try { persist(); } catch (error) { throw error; }",
+      "after": "try { persist(); } catch (error) {}",
+      "expectedCategory": "error-swallowed"
+    },
+    {
+      "id": "assertion-removed",
+      "label": "regression",
+      "file": "fixture.test.ts",
+      "before": "test(\"persists\", () => { expect(save()).toBe(true); });",
+      "after": "test(\"persists\", () => { save(); });",
+      "expectedCategory": "assertion-weakening"
+    },
+    {
+      "id": "test-skipped",
+      "label": "regression",
+      "file": "fixture.test.ts",
+      "before": "test(\"validates\", () => { expect(validate()).toBe(true); });",
+      "after": "test.skip(\"validates\", () => { expect(validate()).toBe(true); });",
+      "expectedCategory": "test-skip-added"
+    },
+    {
+      "id": "guard-inverted",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "if (!authorized) throw new Error(\"denied\");",
+      "after": "if (authorized) throw new Error(\"denied\");",
+      "expectedCategory": "guard-inversion"
+    },
+    {
+      "id": "access-conjunction-weakened",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "if (authorized && valid) grant();",
+      "after": "if (authorized || valid) grant();",
+      "expectedCategory": "logical-operator-change"
+    },
+    {
+      "id": "throw-converted-to-success",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "function save() { throw new Error(\"failure\"); }",
+      "after": "function save() { return true; }",
+      "expectedCategory": "return-throw-change"
+    },
+    {
+      "id": "nullish-default-removed",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "const retries = options.retries ?? 3;",
+      "after": "const retries = options.retries;",
+      "expectedCategory": "nullish-coalescing-change"
+    },
+    {
+      "id": "optional-chain-removed",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "const city = user?.address?.city;",
+      "after": "const city = user.address.city;",
+      "expectedCategory": "optional-chaining-change"
+    },
+    {
+      "id": "comparison-inverted",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "if (balance < total) reject();",
+      "after": "if (balance > total) reject();",
+      "expectedCategory": "comparison-change"
+    },
+    {
+      "id": "same-count-assertion-weakened",
+      "label": "regression",
+      "file": "fixture.test.ts",
+      "before": "expect(result.status).toBe(200);",
+      "after": "expect(result.status).toBeDefined();",
+      "expectedCategory": "assertion-weakening",
+      "knownLimitation": "Matcher strength is not inferred when expect-call counts remain equal"
+    },
+    {
+      "id": "await-removed",
+      "label": "regression",
+      "file": "fixture.ts",
+      "before": "async function save() { await persist(); return true; }",
+      "after": "async function save() { persist(); return true; }",
+      "expectedCategory": "async-await-change",
+      "knownLimitation": "The current adapter does not compare await expressions"
+    },
+    {
+      "id": "formatting-only",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "function sum(a,b){return a+b;}",
+      "after": "function sum(a, b) {\n  return a + b;\n}"
+    },
+    {
+      "id": "comment-only",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "function normalize(value) { return value.trim(); }",
+      "after": "// Normalize surrounding space\nfunction normalize(value) { return value.trim(); }"
+    },
+    {
+      "id": "local-variable-rename",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "function count(items) { const n = items.length; return n; }",
+      "after": "function count(items) { const size = items.length; return size; }"
+    },
+    {
+      "id": "private-helper-rename",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "function calculate(a, b) { return a + b; } const total = calculate(1, 2);",
+      "after": "function sum(a, b) { return a + b; } const total = sum(1, 2);"
+    },
+    {
+      "id": "catch-binding-rename",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "try { save(); } catch (e) { throw e; }",
+      "after": "try { save(); } catch (error) { throw error; }"
+    },
+    {
+      "id": "object-key-reorder",
+      "label": "benign",
+      "file": "fixture.ts",
+      "before": "const options = { retries: 3, timeout: 1000 };",
+      "after": "const options = { timeout: 1000, retries: 3 };"
+    },
+    {
+      "id": "assert-formatting",
+      "label": "benign",
+      "file": "fixture.test.ts",
+      "before": "expect(result).toBe(true);",
+      "after": "expect(result)\n  .toBe(true);"
+    }
+  ]
+}

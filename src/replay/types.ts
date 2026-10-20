@@ -1,3 +1,5 @@
+import type { SandboxCapabilities } from "../sandbox/types.js";
+
 export type ReplayDriftCategory =
   | "REPOSITORY_DRIFT"
   | "COMMIT_DRIFT"
@@ -53,6 +55,8 @@ export interface ReplayManifest {
   readonly agentProfile: string;
   readonly operatingSystem: string;
   readonly architecture: string;
+  /** Missing legacy capability evidence is unverified, not an implicit match. */
+  readonly sandboxCapabilities?: SandboxCapabilities | null;
   readonly runtimeVersions: Record<string, string>;
   readonly normalizedCommands: readonly ReplayCommandSpec[];
   readonly recordedResults: readonly ReplayRecordedResult[];
