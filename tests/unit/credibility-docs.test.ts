@@ -79,4 +79,13 @@ describe("Preview documentation credibility contracts", () => {
       expect((await fetch(`${instance.url}/not-a-status-route`)).status).toBe(404);
     } finally { await instance.close(); }
   });
+  it("keeps incomplete runner allocation evidence separate from passing commit-scoped proof", () => {
+    const guide = read("docs/validation-evidence.md");
+    expect(guide).toContain("Cancelled, queued, skipped, and pending are not passing verification");
+    expect(guide).toContain("b01340d5abdc7a658c2dc6e77c3f68f45e65f941");
+    expect(guide).toContain("39488828528");
+    expect(guide).toContain("not subsequent edits");
+    expect(guide).toContain("branch-protection settings");
+  });
+
 });

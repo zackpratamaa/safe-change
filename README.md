@@ -381,6 +381,8 @@ See [usage, exact statuses and trust boundaries](docs/quality-gates.md), [13-rep
 Experimental opt-in preview, not a general-availability safety certification. The guarded [GitHub preview workflow](.github/workflows/preview.yml) publishes a prerelease only after same-commit validation; it does not publish npm packages or replace stable `latest`. Use the GitHub release tarball with `--omit=optional` for the tested TypeScript fallback route. See [installation, actual validation and known gaps](docs/preview-validation.md). Native IDE consent remains unverified.
 ## Documentation
 
+See [how to read validation evidence](docs/validation-evidence.md) for commit-scoped CI proof and the distinction between incomplete runs and passing verification.
+
 | File | Contents |
 |---|---|
 | [GUIDE.md](GUIDE.md) | Full setup, usage, and troubleshooting |
