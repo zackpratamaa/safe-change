@@ -955,9 +955,9 @@ export function renderDashboardHtml(nonce?: string): string {
         <div>
           <div class="brand-title">
             safe-change dashboard
-            <span class="badge badge-indigo" style="font-size: 10px; padding: 1px 7px;">v1.1.0-preview.1 Enterprise</span>
+            <span class="badge badge-indigo" style="font-size: 10px; padding: 1px 7px;">v1.1.0-preview.1 Experimental</span>
           </div>
-          <div class="brand-desc">Autonomous verification telemetry, verifiable execution & cryptographic trust sentinel</div>
+          <div class="brand-desc">Local verification status and experimental policy, replay & signing tools</div>
         </div>
       </div>
       <div class="header-actions">
@@ -1615,7 +1615,7 @@ export function renderDashboardHtml(nonce?: string): string {
       const auditSub = document.getElementById('stat-audit-sub');
       if (audit) {
         auditEl.textContent = (audit.totalEvents || 0) + ' events';
-        auditSub.textContent = audit.verified ? '100% hash chain verified' : 'Integrity broken';
+        auditSub.textContent = audit.verified ? 'Local digest links consistent' : 'Integrity broken';
       } else {
         auditEl.textContent = '0 events';
         auditSub.textContent = 'Audit log initialized';

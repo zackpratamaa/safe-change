@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release justification policy (going forward)
+- Every future MAJOR `x.0.0` proposal requires a written release justification in its changelog entry: stabilization start/end dates, elapsed soak period, tested commit/run links, unresolved limitations, and the reason for a breaking-version change.
+- Same-day delivery after a minor release is not stabilization evidence. A version number does not establish maturity or independent review.
+- This is a documented review requirement, not a claim that an automated release gate currently enforces every field. Do not invent a retrospective soak period for v1.0.0.
+
+### Documentation
+- Separate the core save/check/diff workflow from opt-in Experimental policy/integrity/signing subsystems; no advanced subsystem is newly certified Stable.
+- Align the supported-source version with the root preview manifest, document loopback code/test pointers, and name dashboard endpoints the local status API.
+
 ## [1.1.0-preview.1] - 2026-10-14
 
 ### Preview status
@@ -42,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2026-09-29
 
+Historical implementation record, **not a stability or security certification**. The risk engine, assess/authorize, leases/fingerprints/evidence/audit, approvals/policy-root verification, semantic diff, replay, sandbox and attestation subsystems remain **Experimental and not yet independently verified**. No independently validated stabilization/soak period is recorded for this major release. See the current [maturity table](README.md#opt-in-advanced-policy-and-integrity-layer--experimental) and [security boundaries](SECURITY.md).
+
 ### Added
 - Executable enterprise risk engine with deterministic 0-100 scoring and Standard, Enhanced, High Assurance, and Critical Change mode selection.
 - `safe-change assess` command for baseline-aware risk classification, change-budget enforcement, mandatory evidence configuration, and approval gating.
@@ -51,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomic multi-agent write leases with session ownership, expiration, baseline identity, starting HEAD, and workspace-fingerprint binding.
 - Workspace fingerprints covering Git HEAD, branch, hashed remote identity, configuration, rules, lockfiles, policy, canonical skill, agent profile, Node.js version, operating system, and architecture.
 - Source-free evidence bundles with baseline, diff, verification, environment, manifest, SHA-256 checksums, and aggregate evidence digest.
-- Tamper-evident append-only audit events linked by sequence number, previous digest, payload digest, and event digest.
+- Local audit events linked by sequence number, previous digest, payload digest, and event digest; not immutable external storage, and an equal-user state writer can rebuild the chain.
 - Streaming secret-output blocker for GitHub and npm tokens, private keys, cloud access keys, authorization headers, credentialed connection strings, and generic secret assignments.
 - Integrity commands: `lease`, `fingerprint`, `evidence`, and `audit verify`.
 - Capability-based agent authorization with explicit allow, deny, resource scope, expiration, and default-deny policy.
@@ -61,12 +72,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detached Ed25519 policy-root verification with policy digest binding and configuration-level fail-closed enforcement when signatures are mandatory.
 - Enforcement commands: `authorize`, `approval request|grant|status`, and `policy verify`.
 - AST Semantic Diff Engine with TypeScript/JavaScript and JSON adapters, detecting unary negation inversion, guard removals, test skipping/weakening, catch block error swallowing, and semantic AST mutations.
-- Deterministic Replay Subsystem recording execution sessions, environment snapshots, toolchain digests, and verifying zero-drift across 13 distinct drift categories.
+- Experimental replay recording and metadata drift comparisons. The historical count of 13 drift categories is not precision/recall or independent reexecution evidence; a labeled per-category corpus remains a validation requirement.
 - Cryptographic Attestation Framework implementing RFC 8785 JSON Canonicalization Scheme (JCS) and Ed25519 DSSE (Dead Simple Signing Envelope) in-toto attestations over verification evidence.
 - OS-Backed Command Sandbox with direct Node.js/npm executable resolution (preventing CVE-2024-27980 and command injection), process tree termination, temporary home isolation, and scrubbed environment allowlists.
 - Verifiable Execution commands: `semantic-diff`, `replay`, `attest`, `identity`, `approval sign`, and `approval verify`.
 - Enterprise Liquid Glass Dashboard with developer-grade `/SAFE-CHANGE` brand mark, 6 responsive hero metric cards (System State, Monitored Baseline, Enterprise Risk & Mode, Change Budget, Active Write Lease, and Audit & Trust), and 6 interactive segmented tabs (Overview & Baseline, Enterprise Risk & Budget, AST Semantic Security, Verifiable Replay & Attestations, Identity & Trust Registry, and Tamper-Evident Audit Chain).
-- Zero-dependency embedded REST telemetry API endpoints: `/api/enterprise`, `/api/lease`, `/api/audit`, `/api/identity`, and `/api/verifiable`.
+- Embedded read-only local status API endpoints: `/api/enterprise`, `/api/lease`, `/api/audit`, `/api/identity`, and `/api/verifiable`.
 
 ## [0.3.1] - 2026-09-29
 

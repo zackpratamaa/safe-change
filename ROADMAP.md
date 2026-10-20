@@ -58,7 +58,7 @@ Status labels: Done | In Progress | Planned
   stored in .safe-change/log.json
 - safe-change log command with --last, --all, --json,
   --export, and --clear options
-- safe_change_log MCP tool for agent access to historical telemetry
+- safe_change_log MCP tool for agent access to local history
 - Local Dashboard at localhost:4242 via safe-change dashboard
 - 4 Dashboard panels: System State, Monitored Baseline,
   Regression Timeline stream, and Safety Guardrails
@@ -78,7 +78,9 @@ Status labels: Done | In Progress | Planned
 - Commercial AGPL-3.0 copyleft boundaries clarified
 - Unified version synchronization across Rust crate and 7 npm platform packages
 
-## v1.0.0 -- Production Stable & High-Assurance Enterprise Platform (Released)
+## v1.0.0 -- Historical advanced feature rollout (Experimental)
+
+All subsystems in this historical block are Experimental and not yet independently verified. Implemented does not mean production-stable; no soak period is asserted. See [maturity labels](README.md#opt-in-advanced-policy-and-integrity-layer--experimental).
 
 - Risk scoring engine (0-100) and automatic operating-mode selection (Done)
 - Machine-readable enterprise policy and change-budget enforcement (Done)
@@ -92,9 +94,9 @@ Status labels: Done | In Progress | Planned
 - Command timeout/process-tree controls and optional environment allowlisting (Done); default inheritance and provider isolation limits remain documented
 - Ed25519 approval identity trust registry and multi-party signing (Done)
 - Enterprise Liquid Glass Dashboard with `/SAFE-CHANGE` brand mark, 6 Hero Metrics, and 6 Segments (Done)
-- Zero-dependency embedded REST telemetry API endpoints (Done)
-- Cross-platform precompiled Rust native engine distribution (7 platform targets) (Done)
-- Production-grade security policy, full documentation, and verifiable CI/CD release pipeline (Done)
+- Embedded read-only local status API endpoints (Implemented; Experimental)
+- Four targets configured in active native CI and root optional dependencies: linux-x64-gnu, win32-x64-msvc, darwin-arm64 and darwin-x64. Additional package manifests alone do not establish working distribution.
+- Security policy and release workflow source exist; support-version drift, independently reviewed security assurance and release-specific evidence require separate validation.
 
 ---
 
