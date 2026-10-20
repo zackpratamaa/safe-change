@@ -117,6 +117,19 @@ jobs:
           path: coverage/coverage-summary.json
           if-no-files-found: error
 
+      - name: Dogfood source-bound release evidence
+        if: matrix.os == 'ubuntu-latest'
+        run: node scripts/release-evidence.mjs
+      - name: Upload checkable release self-evidence
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-evidence-bundle
+          path: |
+            ${{ runner.temp }}/release-evidence.tar.gz
+            ${{ runner.temp }}/release-evidence.tar.gz.sha256
+          if-no-files-found: error
+
   smoke-test:
     name: Package Tarball Smoke Test
     needs: test

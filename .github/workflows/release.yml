@@ -188,6 +188,17 @@ jobs:
       - name: Generate CycloneDX software bill of materials
         run: npm sbom --sbom-format cyclonedx > safe-change-sbom.cdx.json
 
+      - name: Dogfood source-bound release evidence
+        run: node scripts/release-evidence.mjs
+      - name: Upload checkable release self-evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-evidence-bundle
+          path: |
+            ${{ runner.temp }}/release-evidence.tar.gz
+            ${{ runner.temp }}/release-evidence.tar.gz.sha256
+          if-no-files-found: error
+
       - name: Upload root tarball artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -252,6 +263,15 @@ jobs:
           name: root-package-tarball
           path: .
 
+      - name: Download verified release self-evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-evidence-bundle
+          path: .
+
+      - name: Verify self-evidence archive checksum
+        run: sha256sum -c release-evidence.tar.gz.sha256
+
       - name: Publish exact verified root tarball
         run: node scripts/publish-orchestrator.mjs --phase root
         env:
@@ -267,11 +287,11 @@ jobs:
           if [[ "$RELEASE_TAG" == *-* ]]; then
             gh release create "$RELEASE_TAG" --prerelease --latest=false \
               --title "$RELEASE_TAG — Experimental Developer Preview" \
-              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json
+              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json release-evidence.tar.gz release-evidence.tar.gz.sha256
           else
             gh release create "$RELEASE_TAG" \
               --title "$RELEASE_TAG" \
-              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json
+              --generate-notes safe-change-*.tgz safe-change-sbom.cdx.json safe-change-audit-anchor.json release-evidence.tar.gz release-evidence.tar.gz.sha256
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -305,6 +325,15 @@ jobs:
         with:
           name: root-package-tarball
           path: .
+
+      - name: Download verified release self-evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-evidence-bundle
+          path: .
+
+      - name: Verify self-evidence archive checksum
+        run: sha256sum -c release-evidence.tar.gz.sha256
 
       - name: Verify exact native and root artifacts without publishing
         run: node scripts/publish-orchestrator.mjs --dry-run
