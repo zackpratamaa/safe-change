@@ -8,7 +8,16 @@ export async function runAudit(options: {
 }): Promise<number> {
   const repoRoot = await getRepositoryRoot(process.cwd()).catch(() => null);
   if (!repoRoot) return ExitCodes.NOT_GIT_REPO;
-  const events = await readAuditEvents(repoRoot);
+  let events;
+  try {
+    events = await readAuditEvents(repoRoot);
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    process.stdout.write(options.format === "json"
+      ? `${JSON.stringify({ valid: false, eventCount: null, headDigest: null, error: reason }, null, 2)}\n`
+      : `Audit log: INVALID (${reason})\n`);
+    return ExitCodes.NEW_FAILURE;
+  }
   const valid = verifyAuditEvents(events);
   const result = {
     valid,
