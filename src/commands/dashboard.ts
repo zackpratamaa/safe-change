@@ -10,7 +10,7 @@ export interface DashboardCommandOptions {
 }
 
 export async function runDashboard(
-  options: DashboardCommandOptions = {}
+  options: DashboardCommandOptions = {},
 ): Promise<number> {
   const format = options.format ?? "terminal";
 
@@ -22,8 +22,8 @@ export async function runDashboard(
       renderError(
         format,
         "Not a Git repository. safe-change requires a Git repository.",
-        ExitCodes.NOT_GIT_REPO
-      )
+        ExitCodes.NOT_GIT_REPO,
+      ),
     );
     return ExitCodes.NOT_GIT_REPO;
   }
@@ -34,7 +34,7 @@ export async function runDashboard(
       repoRoot,
     });
 
-    const displayUrl = `http://localhost:${instance.port}`;
+    const displayUrl = instance.url;
     process.stdout.write(`Dashboard running at ${displayUrl}\n`);
     process.stdout.write("Press Ctrl+C to stop.\n");
 
@@ -66,8 +66,8 @@ export async function runDashboard(
       renderError(
         format,
         `Failed to start dashboard: ${err instanceof Error ? err.message : String(err)}`,
-        ExitCodes.INTERNAL_ERROR
-      )
+        ExitCodes.INTERNAL_ERROR,
+      ),
     );
     return ExitCodes.INTERNAL_ERROR;
   }
