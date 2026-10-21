@@ -10,7 +10,7 @@ import {
   lstatSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
-import { resolve, join, basename } from "node:path";
+import { resolve, join, basename, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -167,14 +167,18 @@ function assertRegularFile(filePath) {
 
 export function inspectPackageTarball(tarballPath) {
   assertRegularFile(tarballPath);
+  const tarballDirectory = dirname(tarballPath);
+  const tarballName = basename(tarballPath);
   try {
     const metadata = JSON.parse(
-      execFileSync("tar", ["-xOf", tarballPath, "package/package.json"], {
+      execFileSync("tar", ["-xOf", tarballName, "package/package.json"], {
+        cwd: tarballDirectory,
         encoding: "utf8",
         maxBuffer: 16 * 1024 * 1024,
       }),
     );
-    const files = execFileSync("tar", ["-tzf", tarballPath], {
+    const files = execFileSync("tar", ["-tzf", tarballName], {
+      cwd: tarballDirectory,
       encoding: "utf8",
       maxBuffer: 16 * 1024 * 1024,
     })
