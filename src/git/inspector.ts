@@ -128,16 +128,33 @@ export async function getFileEntries(
   }
 
   if (statusResult.stdout.length > 0) {
-    const parts = statusResult.stdout.split("\0").filter((s) => s.length > 0);
+    const parts = statusResult.stdout.split("\0");
 
-    for (const part of parts) {
-      // Porcelain v1 format: XY <path>
-      // X = index status, Y = worktree status
-      if (part.length < 4) continue;
+    for (let index = 0; index < parts.length; index++) {
+      const part = parts[index]!;
+      if (!part) continue;
+      // Porcelain v1 `-z` uses `XY destination\0source\0` for rename and
+      // copy records. The source path has no status prefix and must be consumed
+      // with its record instead of being parsed as a second file.
+      if (part.length < 4) {
+        throw new GitError("git status returned a malformed porcelain record.");
+      }
 
       const indexStatus = part[0]!;
       const worktreeStatus = part[1]!;
       const filePath = part.substring(3);
+      if (
+        indexStatus === "R" ||
+        indexStatus === "C" ||
+        worktreeStatus === "R" ||
+        worktreeStatus === "C"
+      ) {
+        const sourcePath = parts[index + 1];
+        if (sourcePath === undefined || sourcePath.length === 0) {
+          throw new GitError("git status returned a rename without a source path.");
+        }
+        index += 1;
+      }
 
       if (isExcluded(filePath)) continue;
 

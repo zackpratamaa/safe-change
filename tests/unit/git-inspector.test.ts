@@ -92,6 +92,22 @@ describe("git/inspector", () => {
       expect(files["untracked.txt"]!.status).toBe("untracked");
     });
 
+    it("consumes the source path of a staged rename without a phantom deletion", async () => {
+      repo = await createTempRepo();
+      const oldPath = "old-name-with-many-chars.txt";
+      const newPath = "renamed unicode-✓ file.txt";
+      await repo.writeFile(oldPath, "rename content\n");
+      await repo.git("add", oldPath);
+      await repo.git("commit", "-m", "add rename source");
+      await repo.git("mv", oldPath, newPath);
+
+      const files = await getFileEntries(repo.path);
+      expect(files[newPath]).toMatchObject({ tracked: true, status: "staged" });
+      expect(files[oldPath]).toBeUndefined();
+      expect(files["-name-with-many-chars.txt"]).toBeUndefined();
+      expect(Object.keys(files)).toEqual(expect.arrayContaining([newPath]));
+    });
+
     it("should detect staged files", async () => {
       repo = await createTempRepo();
       await repo.writeFile("staged.txt", "staged content");
