@@ -1,12 +1,17 @@
 {
   "schemaVersion": 1,
   "status": "blocked",
-  "candidateSha": null,
+  "candidateSha": "5e99b4f12b27890df22ea5bb4e4e0151c68b89ec",
   "stabilization": {
     "minimumDays": 14,
-    "startedOn": null,
+    "startedOn": "2026-10-21",
     "endedOn": null,
-    "testedRuns": [],
+    "testedRuns": [
+      {
+        "sourceSha": "5e99b4f12b27890df22ea5bb4e4e0151c68b89ec",
+        "url": "https://github.com/zackpratamaa/safe-change/actions/runs/39656102889"
+      }
+    ],
     "incidents": []
   },
   "independentSecurityReview": {
