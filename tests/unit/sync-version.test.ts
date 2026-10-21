@@ -1,8 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { NATIVE_TARGET_NAMES } from "../../scripts/native-targets.mjs";
 
 const SCRIPT_PATH = resolve("scripts", "sync-version.mjs");
 
@@ -14,14 +22,17 @@ function createMockRepository(baseDir: string, initialVersion = "0.3.1"): void {
       {
         name: "mock-package",
         version: initialVersion,
-        optionalDependencies: {
-          "@safe-change/win32-x64-msvc": initialVersion,
-        },
+        optionalDependencies: Object.fromEntries(
+          NATIVE_TARGET_NAMES.map((target) => [
+            `@safe-change/${target}`,
+            initialVersion,
+          ]),
+        ),
       },
       null,
-      2
+      2,
     ) + "\n",
-    "utf-8"
+    "utf-8",
   );
 
   // 2. Root package-lock.json
@@ -36,16 +47,19 @@ function createMockRepository(baseDir: string, initialVersion = "0.3.1"): void {
           "": {
             name: "mock-package",
             version: initialVersion,
-            optionalDependencies: {
-              "@safe-change/win32-x64-msvc": initialVersion,
-            },
+            optionalDependencies: Object.fromEntries(
+              NATIVE_TARGET_NAMES.map((target) => [
+                `@safe-change/${target}`,
+                initialVersion,
+              ]),
+            ),
           },
         },
       },
       null,
-      2
+      2,
     ) + "\n",
-    "utf-8"
+    "utf-8",
   );
 
   // 3. Cargo.toml
@@ -54,26 +68,26 @@ function createMockRepository(baseDir: string, initialVersion = "0.3.1"): void {
   writeFileSync(
     join(cargoDir, "Cargo.toml"),
     `[package]\nname = "safe-change-native"\nversion = "${initialVersion}"\nedition = "2021"\n`,
-    "utf-8"
+    "utf-8",
   );
 
-  // 4. npm platform package
-  const npmSubDir = join(baseDir, "npm", "win32-x64-msvc");
-  mkdirSync(npmSubDir, { recursive: true });
-  writeFileSync(
-    join(npmSubDir, "package.json"),
-    JSON.stringify(
-      {
-        name: "@safe-change/win32-x64-msvc",
-        version: initialVersion,
-        os: ["win32"],
-        cpu: ["x64"],
-      },
-      null,
-      2
-    ) + "\n",
-    "utf-8"
-  );
+  // 4. npm platform packages
+  for (const target of NATIVE_TARGET_NAMES) {
+    const npmSubDir = join(baseDir, "npm", target);
+    mkdirSync(npmSubDir, { recursive: true });
+    writeFileSync(
+      join(npmSubDir, "package.json"),
+      JSON.stringify(
+        {
+          name: `@safe-change/${target}`,
+          version: initialVersion,
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf-8",
+    );
+  }
 
   // 5. Dashboard template badge
   const dashboardDir = join(baseDir, "src", "dashboard");
@@ -81,7 +95,7 @@ function createMockRepository(baseDir: string, initialVersion = "0.3.1"): void {
   writeFileSync(
     join(dashboardDir, "template.ts"),
     `export const html = '<span class="badge badge-info" style="font-size: 10px; padding: 1px 6px;">v${initialVersion}</span>';\n`,
-    "utf-8"
+    "utf-8",
   );
 
   // 6. Docs
@@ -90,7 +104,7 @@ function createMockRepository(baseDir: string, initialVersion = "0.3.1"): void {
   writeFileSync(
     join(docsDir, "native-binary-distribution.md"),
     `# Native Distribution\n\n\`\`\`json\n{\n  "version": "${initialVersion}"\n}\n\`\`\`\n`,
-    "utf-8"
+    "utf-8",
   );
 }
 
@@ -118,7 +132,9 @@ describe("scripts/sync-version.mjs", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("v0.3.1");
 
-    const rootPkg = JSON.parse(readFileSync(join(testDir, "package.json"), "utf-8"));
+    const rootPkg = JSON.parse(
+      readFileSync(join(testDir, "package.json"), "utf-8"),
+    );
     expect(rootPkg.version).toBe("0.3.1");
     expect(rootPkg.version).not.toBe("0.3.0");
   });
@@ -134,25 +150,47 @@ describe("scripts/sync-version.mjs", () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("v0.4.0");
 
-    const rootPkg = JSON.parse(readFileSync(join(testDir, "package.json"), "utf-8"));
+    const rootPkg = JSON.parse(
+      readFileSync(join(testDir, "package.json"), "utf-8"),
+    );
     expect(rootPkg.version).toBe("0.4.0");
-    expect(rootPkg.optionalDependencies["@safe-change/win32-x64-msvc"]).toBe("0.4.0");
+    expect(rootPkg.optionalDependencies["@safe-change/win32-x64-msvc"]).toBe(
+      "0.4.0",
+    );
 
-    const lock = JSON.parse(readFileSync(join(testDir, "package-lock.json"), "utf-8"));
+    const lock = JSON.parse(
+      readFileSync(join(testDir, "package-lock.json"), "utf-8"),
+    );
     expect(lock.version).toBe("0.4.0");
     expect(lock.packages[""].version).toBe("0.4.0");
-    expect(lock.packages[""].optionalDependencies["@safe-change/win32-x64-msvc"]).toBe("0.4.0");
+    expect(
+      lock.packages[""].optionalDependencies["@safe-change/win32-x64-msvc"],
+    ).toBe("0.4.0");
 
-    const cargo = readFileSync(join(testDir, "crates", "safe-change-native", "Cargo.toml"), "utf-8");
+    const cargo = readFileSync(
+      join(testDir, "crates", "safe-change-native", "Cargo.toml"),
+      "utf-8",
+    );
     expect(cargo).toContain('version = "0.4.0"');
 
-    const npmPkg = JSON.parse(readFileSync(join(testDir, "npm", "win32-x64-msvc", "package.json"), "utf-8"));
+    const npmPkg = JSON.parse(
+      readFileSync(
+        join(testDir, "npm", "win32-x64-msvc", "package.json"),
+        "utf-8",
+      ),
+    );
     expect(npmPkg.version).toBe("0.4.0");
 
-    const dashboard = readFileSync(join(testDir, "src", "dashboard", "template.ts"), "utf-8");
+    const dashboard = readFileSync(
+      join(testDir, "src", "dashboard", "template.ts"),
+      "utf-8",
+    );
     expect(dashboard).toContain("v0.4.0</span>");
 
-    const docs = readFileSync(join(testDir, "docs", "native-binary-distribution.md"), "utf-8");
+    const docs = readFileSync(
+      join(testDir, "docs", "native-binary-distribution.md"),
+      "utf-8",
+    );
     expect(docs).toContain('"version": "0.4.0"');
   });
 
@@ -189,12 +227,19 @@ describe("scripts/sync-version.mjs", () => {
 
   it("rejects invalid SemVer and exits non-zero without modifying repository files", () => {
     createMockRepository(testDir, "0.3.1");
-    const originalPkgContent = readFileSync(join(testDir, "package.json"), "utf-8");
+    const originalPkgContent = readFileSync(
+      join(testDir, "package.json"),
+      "utf-8",
+    );
 
-    const result = spawnSync(process.execPath, [SCRIPT_PATH, "invalid-semver-string"], {
-      cwd: testDir,
-      encoding: "utf-8",
-    });
+    const result = spawnSync(
+      process.execPath,
+      [SCRIPT_PATH, "invalid-semver-string"],
+      {
+        cwd: testDir,
+        encoding: "utf-8",
+      },
+    );
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Invalid SemVer version");
@@ -227,7 +272,11 @@ describe("scripts/sync-version.mjs", () => {
     const npmPkgPath = join(testDir, "npm", "win32-x64-msvc", "package.json");
     const mismatchedNpmPkg = JSON.parse(readFileSync(npmPkgPath, "utf-8"));
     mismatchedNpmPkg.version = "0.2.0";
-    writeFileSync(npmPkgPath, JSON.stringify(mismatchedNpmPkg, null, 2) + "\n", "utf-8");
+    writeFileSync(
+      npmPkgPath,
+      JSON.stringify(mismatchedNpmPkg, null, 2) + "\n",
+      "utf-8",
+    );
 
     const result = spawnSync(process.execPath, [SCRIPT_PATH, "--check"], {
       cwd: testDir,
@@ -244,7 +293,11 @@ describe("scripts/sync-version.mjs", () => {
   });
 
   it("fails safely with actionable English error on malformed package metadata", () => {
-    writeFileSync(join(testDir, "package.json"), "{ malformed json content", "utf-8");
+    writeFileSync(
+      join(testDir, "package.json"),
+      "{ malformed json content",
+      "utf-8",
+    );
 
     const result = spawnSync(process.execPath, [SCRIPT_PATH], {
       cwd: testDir,
@@ -266,24 +319,56 @@ describe("scripts/sync-version.mjs", () => {
   });
   it("checks and synchronizes private napi metadata and both new target manifests", () => {
     createMockRepository(testDir, "0.3.1");
-    const napiPath = join(testDir, "crates", "safe-change-native", "package.json");
-    writeFileSync(napiPath, JSON.stringify({ name: "safe-change-native", private: true, version: "0.1.0" }));
+    const napiPath = join(
+      testDir,
+      "crates",
+      "safe-change-native",
+      "package.json",
+    );
+    writeFileSync(
+      napiPath,
+      JSON.stringify({
+        name: "safe-change-native",
+        private: true,
+        version: "0.1.0",
+      }),
+    );
     for (const target of ["linux-arm64-gnu", "linux-x64-musl"]) {
       const dir = join(testDir, "npm", target);
       mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, "package.json"), JSON.stringify({ name: `@safe-change/${target}`, version: "0.1.0" }));
+      writeFileSync(
+        join(dir, "package.json"),
+        JSON.stringify({ name: `@safe-change/${target}`, version: "0.1.0" }),
+      );
     }
-    const check = spawnSync(process.execPath, [SCRIPT_PATH, "--check"], { cwd: testDir, encoding: "utf8" });
+    const check = spawnSync(process.execPath, [SCRIPT_PATH, "--check"], {
+      cwd: testDir,
+      encoding: "utf8",
+    });
     expect(check.status).toBe(1);
     expect(check.stderr).toContain("crates/safe-change-native/package.json");
     expect(check.stderr).toContain("linux-arm64-gnu");
     expect(check.stderr).toContain("linux-x64-musl");
-    const sync = spawnSync(process.execPath, [SCRIPT_PATH, "0.4.0"], { cwd: testDir, encoding: "utf8" });
+    const sync = spawnSync(process.execPath, [SCRIPT_PATH, "0.4.0"], {
+      cwd: testDir,
+      encoding: "utf8",
+    });
     expect(sync.status, sync.stderr).toBe(0);
-    expect(JSON.parse(readFileSync(napiPath, "utf8"))).toEqual({ name: "safe-change-native", private: true, version: "0.4.0" });
+    expect(JSON.parse(readFileSync(napiPath, "utf8"))).toEqual({
+      name: "safe-change-native",
+      private: true,
+      version: "0.4.0",
+    });
     for (const target of ["linux-arm64-gnu", "linux-x64-musl"]) {
-      expect(JSON.parse(readFileSync(join(testDir, "npm", target, "package.json"), "utf8")).version).toBe("0.4.0");
+      expect(
+        JSON.parse(
+          readFileSync(join(testDir, "npm", target, "package.json"), "utf8"),
+        ).version,
+      ).toBe("0.4.0");
     }
-    expect(spawnSync(process.execPath, [SCRIPT_PATH, "--check"], { cwd: testDir }).status).toBe(0);
+    expect(
+      spawnSync(process.execPath, [SCRIPT_PATH, "--check"], { cwd: testDir })
+        .status,
+    ).toBe(0);
   });
 });

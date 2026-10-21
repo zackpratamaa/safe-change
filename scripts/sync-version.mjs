@@ -1,8 +1,13 @@
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  NATIVE_PACKAGE_NAMES,
+  NATIVE_TARGET_NAMES,
+} from "./native-targets.mjs";
 
-const SEMVER_REGEX = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
+const SEMVER_REGEX =
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 
 export function isValidSemver(version) {
   return typeof version === "string" && SEMVER_REGEX.test(version.trim());
@@ -23,22 +28,37 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
 
   const expectedVersion = currentPkg.version;
   if (!isValidSemver(expectedVersion)) {
-    throw new Error(`Invalid version in package.json: "${expectedVersion}". Must be valid SemVer.`);
+    throw new Error(
+      `Invalid version in package.json: "${expectedVersion}". Must be valid SemVer.`,
+    );
   }
 
   const mismatches = [];
 
   // 1. Root package.json optionalDependencies
-  if (currentPkg.optionalDependencies) {
-    for (const [dep, ver] of Object.entries(currentPkg.optionalDependencies)) {
-      if (dep.startsWith("@safe-change/") && ver !== expectedVersion) {
-        mismatches.push({
-          file: "package.json",
-          target: `optionalDependencies.${dep}`,
-          expected: expectedVersion,
-          found: ver,
-        });
-      }
+  const optionalDependencies = currentPkg.optionalDependencies ?? {};
+  for (const dep of NATIVE_PACKAGE_NAMES) {
+    const ver = optionalDependencies[dep];
+    if (ver !== expectedVersion) {
+      mismatches.push({
+        file: "package.json",
+        target: `optionalDependencies.${dep}`,
+        expected: expectedVersion,
+        found: ver ?? "missing",
+      });
+    }
+  }
+  for (const [dep, ver] of Object.entries(optionalDependencies)) {
+    if (
+      dep.startsWith("@safe-change/") &&
+      !NATIVE_PACKAGE_NAMES.includes(dep)
+    ) {
+      mismatches.push({
+        file: "package.json",
+        target: `optionalDependencies.${dep}`,
+        expected: "not configured",
+        found: ver,
+      });
     }
   }
 
@@ -55,7 +75,11 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
           found: lock.version,
         });
       }
-      if (lock.packages && lock.packages[""] && lock.packages[""].version !== expectedVersion) {
+      if (
+        lock.packages &&
+        lock.packages[""] &&
+        lock.packages[""].version !== expectedVersion
+      ) {
         mismatches.push({
           file: "package-lock.json",
           target: 'lock.packages[""].version',
@@ -63,16 +87,30 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
           found: lock.packages[""].version,
         });
       }
-      if (lock.packages && lock.packages[""] && lock.packages[""].optionalDependencies) {
-        for (const [dep, ver] of Object.entries(lock.packages[""].optionalDependencies)) {
-          if (dep.startsWith("@safe-change/") && ver !== expectedVersion) {
-            mismatches.push({
-              file: "package-lock.json",
-              target: `lock.packages[""].optionalDependencies.${dep}`,
-              expected: expectedVersion,
-              found: ver,
-            });
-          }
+      const lockOptionalDependencies =
+        lock.packages?.[""]?.optionalDependencies ?? {};
+      for (const dep of NATIVE_PACKAGE_NAMES) {
+        const ver = lockOptionalDependencies[dep];
+        if (ver !== expectedVersion) {
+          mismatches.push({
+            file: "package-lock.json",
+            target: `lock.packages[""].optionalDependencies.${dep}`,
+            expected: expectedVersion,
+            found: ver ?? "missing",
+          });
+        }
+      }
+      for (const [dep, ver] of Object.entries(lockOptionalDependencies)) {
+        if (
+          dep.startsWith("@safe-change/") &&
+          !NATIVE_PACKAGE_NAMES.includes(dep)
+        ) {
+          mismatches.push({
+            file: "package-lock.json",
+            target: `lock.packages[""].optionalDependencies.${dep}`,
+            expected: "not configured",
+            found: ver,
+          });
         }
       }
     } catch (error) {
@@ -108,46 +146,69 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
   }
 
   // The private napi build manifest must not drift from Cargo/root versions.
-  const napiPath = join(rootDir, "crates", "safe-change-native", "package.json");
+  const napiPath = join(
+    rootDir,
+    "crates",
+    "safe-change-native",
+    "package.json",
+  );
   if (existsSync(napiPath)) {
     try {
       const napi = JSON.parse(readFileSync(napiPath, "utf-8"));
-      if (napi.version !== expectedVersion) mismatches.push({
-        file: "crates/safe-change-native/package.json", target: "version",
-        expected: expectedVersion, found: napi.version,
-      });
+      if (napi.version !== expectedVersion)
+        mismatches.push({
+          file: "crates/safe-change-native/package.json",
+          target: "version",
+          expected: expectedVersion,
+          found: napi.version,
+        });
     } catch (error) {
-      mismatches.push({ file: "crates/safe-change-native/package.json", target: "parse",
-        expected: "valid JSON", found: error.message });
+      mismatches.push({
+        file: "crates/safe-change-native/package.json",
+        target: "parse",
+        expected: "valid JSON",
+        found: error.message,
+      });
     }
   }
 
   // 4. npm platform packages
-  const npmDir = join(rootDir, "npm");
-  if (existsSync(npmDir)) {
-    const entries = readdirSync(npmDir);
-    for (const entry of entries) {
-      const subPkgPath = join(npmDir, entry, "package.json");
-      if (existsSync(subPkgPath) && statSync(subPkgPath).isFile()) {
-        try {
-          const subPkg = JSON.parse(readFileSync(subPkgPath, "utf-8"));
-          if (subPkg.version !== expectedVersion) {
-            mismatches.push({
-              file: `npm/${entry}/package.json`,
-              target: "version",
-              expected: expectedVersion,
-              found: subPkg.version,
-            });
-          }
-        } catch (error) {
-          mismatches.push({
-            file: `npm/${entry}/package.json`,
-            target: "parse",
-            expected: "valid JSON",
-            found: error.message,
-          });
-        }
+  for (const target of NATIVE_TARGET_NAMES) {
+    const subPkgPath = join(rootDir, "npm", target, "package.json");
+    if (!existsSync(subPkgPath)) {
+      mismatches.push({
+        file: `npm/${target}/package.json`,
+        target: "file",
+        expected: "present",
+        found: "missing",
+      });
+      continue;
+    }
+    try {
+      const subPkg = JSON.parse(readFileSync(subPkgPath, "utf-8"));
+      if (subPkg.name !== `@safe-change/${target}`) {
+        mismatches.push({
+          file: `npm/${target}/package.json`,
+          target: "name",
+          expected: `@safe-change/${target}`,
+          found: subPkg.name ?? "missing",
+        });
       }
+      if (subPkg.version !== expectedVersion) {
+        mismatches.push({
+          file: `npm/${target}/package.json`,
+          target: "version",
+          expected: expectedVersion,
+          found: subPkg.version,
+        });
+      }
+    } catch (error) {
+      mismatches.push({
+        file: `npm/${target}/package.json`,
+        target: "parse",
+        expected: "valid JSON",
+        found: error.message,
+      });
     }
   }
 
@@ -155,7 +216,9 @@ export function checkVersionParity({ rootDir = resolve(".") } = {}) {
   const templatePath = join(rootDir, "src", "dashboard", "template.ts");
   if (existsSync(templatePath)) {
     const templateContent = readFileSync(templatePath, "utf-8");
-    const badgeMatch = templateContent.match(/<span class="badge [^"]*"[^>]*>v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)/);
+    const badgeMatch = templateContent.match(
+      /<span class="badge [^"]*"[^>]*>v([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)/,
+    );
     if (badgeMatch && badgeMatch[1] !== expectedVersion) {
       mismatches.push({
         file: "src/dashboard/template.ts",
@@ -199,19 +262,30 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
 
   const resolvedVersion = targetVersion || currentPkg.version;
   if (!isValidSemver(resolvedVersion)) {
-    throw new Error(`Invalid SemVer version: "${resolvedVersion}". Expected format like "0.3.1".`);
+    throw new Error(
+      `Invalid SemVer version: "${resolvedVersion}". Expected format like "0.3.1".`,
+    );
+  }
+
+  const optionalDependencies = currentPkg.optionalDependencies ?? {};
+  const missingDependencies = NATIVE_PACKAGE_NAMES.filter(
+    (dep) => !Object.hasOwn(optionalDependencies, dep),
+  );
+  const missingPackages = NATIVE_TARGET_NAMES.filter(
+    (target) => !existsSync(join(rootDir, "npm", target, "package.json")),
+  );
+  if (missingDependencies.length > 0 || missingPackages.length > 0) {
+    throw new Error(
+      `Native target layout is incomplete: missing dependencies [${missingDependencies.join(", ")}], missing packages [${missingPackages.join(", ")}].`,
+    );
   }
 
   const updatedFiles = [];
 
   // 1. Root package.json
   currentPkg.version = resolvedVersion;
-  if (currentPkg.optionalDependencies) {
-    for (const dep of Object.keys(currentPkg.optionalDependencies)) {
-      if (dep.startsWith("@safe-change/")) {
-        currentPkg.optionalDependencies[dep] = resolvedVersion;
-      }
-    }
+  for (const dep of NATIVE_PACKAGE_NAMES) {
+    currentPkg.optionalDependencies[dep] = resolvedVersion;
   }
   writeFileSync(pkgPath, JSON.stringify(currentPkg, null, 2) + "\n", "utf-8");
   updatedFiles.push(pkgPath);
@@ -223,12 +297,17 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
     lock.version = resolvedVersion;
     if (lock.packages && lock.packages[""]) {
       lock.packages[""].version = resolvedVersion;
-      if (lock.packages[""].optionalDependencies) {
-        for (const dep of Object.keys(lock.packages[""].optionalDependencies)) {
-          if (dep.startsWith("@safe-change/")) {
-            lock.packages[""].optionalDependencies[dep] = resolvedVersion;
-          }
+      const lockOptionalDependencies = lock.packages[""].optionalDependencies;
+      if (!lockOptionalDependencies) {
+        throw new Error(
+          "package-lock.json is missing root optionalDependencies.",
+        );
+      }
+      for (const dep of NATIVE_PACKAGE_NAMES) {
+        if (!Object.hasOwn(lockOptionalDependencies, dep)) {
+          throw new Error(`package-lock.json is missing ${dep}.`);
         }
+        lockOptionalDependencies[dep] = resolvedVersion;
       }
     }
     writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n", "utf-8");
@@ -239,12 +318,20 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
   const cargoPath = join(rootDir, "crates", "safe-change-native", "Cargo.toml");
   if (existsSync(cargoPath)) {
     let cargoContent = readFileSync(cargoPath, "utf-8");
-    cargoContent = cargoContent.replace(/^version\s*=\s*"[^"]+"/m, `version = "${resolvedVersion}"`);
+    cargoContent = cargoContent.replace(
+      /^version\s*=\s*"[^"]+"/m,
+      `version = "${resolvedVersion}"`,
+    );
     writeFileSync(cargoPath, cargoContent, "utf-8");
     updatedFiles.push(cargoPath);
   }
 
-  const napiPath = join(rootDir, "crates", "safe-change-native", "package.json");
+  const napiPath = join(
+    rootDir,
+    "crates",
+    "safe-change-native",
+    "package.json",
+  );
   if (existsSync(napiPath)) {
     const napi = JSON.parse(readFileSync(napiPath, "utf-8"));
     napi.version = resolvedVersion;
@@ -253,22 +340,17 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
   }
 
   // 4. npm platform packages
-  const npmDir = join(rootDir, "npm");
-  if (existsSync(npmDir)) {
-    const entries = readdirSync(npmDir);
-    for (const entry of entries) {
-      const subPkgPath = join(npmDir, entry, "package.json");
-      try {
-        if (statSync(subPkgPath).isFile()) {
-          const subPkg = JSON.parse(readFileSync(subPkgPath, "utf-8"));
-          subPkg.version = resolvedVersion;
-          writeFileSync(subPkgPath, JSON.stringify(subPkg, null, 2) + "\n", "utf-8");
-          updatedFiles.push(subPkgPath);
-        }
-      } catch {
-        // Skip non-directory or unreadable entries
-      }
+  for (const target of NATIVE_TARGET_NAMES) {
+    const subPkgPath = join(rootDir, "npm", target, "package.json");
+    const subPkg = JSON.parse(readFileSync(subPkgPath, "utf-8"));
+    if (subPkg.name !== `@safe-change/${target}`) {
+      throw new Error(
+        `Native package name mismatch in npm/${target}/package.json.`,
+      );
     }
+    subPkg.version = resolvedVersion;
+    writeFileSync(subPkgPath, JSON.stringify(subPkg, null, 2) + "\n", "utf-8");
+    updatedFiles.push(subPkgPath);
   }
 
   // 5. Dashboard template badge
@@ -277,7 +359,7 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
     let templateContent = readFileSync(templatePath, "utf-8");
     templateContent = templateContent.replace(
       /(<span class="badge [^"]*"[^>]*>v)[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?/g,
-      `$1${resolvedVersion}`
+      `$1${resolvedVersion}`,
     );
     writeFileSync(templatePath, templateContent, "utf-8");
     updatedFiles.push(templatePath);
@@ -287,7 +369,10 @@ export function syncVersion({ rootDir = resolve("."), targetVersion } = {}) {
   const nativeDocPath = join(rootDir, "docs", "native-binary-distribution.md");
   if (existsSync(nativeDocPath)) {
     let nativeDocContent = readFileSync(nativeDocPath, "utf-8");
-    nativeDocContent = nativeDocContent.replace(/"version":\s*"[^"]+"/g, `"version": "${resolvedVersion}"`);
+    nativeDocContent = nativeDocContent.replace(
+      /"version":\s*"[^"]+"/g,
+      `"version": "${resolvedVersion}"`,
+    );
     writeFileSync(nativeDocPath, nativeDocContent, "utf-8");
     updatedFiles.push(nativeDocPath);
   }
@@ -304,26 +389,38 @@ export function main() {
     if (isCheckMode) {
       const { expectedVersion, mismatches } = checkVersionParity();
       if (mismatches.length > 0) {
-        console.error(`Version parity check failed against reference version v${expectedVersion}:`);
+        console.error(
+          `Version parity check failed against reference version v${expectedVersion}:`,
+        );
         for (const mismatch of mismatches) {
-          console.error(`  - ${mismatch.file} (${mismatch.target}): expected "${mismatch.expected}", found "${mismatch.found}"`);
+          console.error(
+            `  - ${mismatch.file} (${mismatch.target}): expected "${mismatch.expected}", found "${mismatch.found}"`,
+          );
         }
         process.exit(1);
       }
-      console.log(`Version parity verified: all managed files match v${expectedVersion}.`);
+      console.log(
+        `Version parity verified: all managed files match v${expectedVersion}.`,
+      );
       process.exit(0);
     }
 
     if (versionArg && !isValidSemver(versionArg)) {
-      console.error(`Invalid SemVer version: "${versionArg}". Expected format like "0.3.1".`);
+      console.error(
+        `Invalid SemVer version: "${versionArg}". Expected format like "0.3.1".`,
+      );
       process.exit(1);
     }
 
-    const { targetVersion, updatedFiles } = syncVersion({ targetVersion: versionArg });
+    const { targetVersion, updatedFiles } = syncVersion({
+      targetVersion: versionArg,
+    });
     for (const file of updatedFiles) {
       console.log(`Updated ${file}`);
     }
-    console.log(`All packages and files successfully synchronized to v${targetVersion}.`);
+    console.log(
+      `All packages and files successfully synchronized to v${targetVersion}.`,
+    );
   } catch (error) {
     console.error(`Error: ${error.message}`);
     process.exit(1);
@@ -332,7 +429,8 @@ export function main() {
 
 const isDirectRun = Boolean(
   process.argv[1] &&
-    resolve(process.argv[1]).toLowerCase() === fileURLToPath(import.meta.url).toLowerCase()
+  resolve(process.argv[1]).toLowerCase() ===
+    fileURLToPath(import.meta.url).toLowerCase(),
 );
 
 if (isDirectRun) {
