@@ -43,6 +43,10 @@ jobs:
             node scripts/validate-release.mjs "${{ github.ref_name }}" --require-tag
           fi
 
+      - name: Enforce stabilization, independent review, and approval for GA tags
+        if: github.event_name == 'push' && github.ref_type == 'tag' && !contains(github.ref_name, '-')
+        run: node scripts/validate-ga-readiness.mjs
+
       - name: Preflight npm credentials and package version status
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
