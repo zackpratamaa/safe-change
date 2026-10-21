@@ -31,6 +31,45 @@ describe("secret output blocker", () => {
     );
   });
 
+  it.each([
+    ["github-token", `ghp_${"Z".repeat(40)}`],
+    ["npm-token", `npm_${"n".repeat(40)}`],
+    ["aws-access-key", `AKIA${"A".repeat(16)}`],
+    ["authorization-header", "Authorization: Bearer example.example.example"],
+    ["connection-string", "postgresql://user:password@database.example/test"],
+    ["generic-secret", `client_secret=${"s".repeat(40)}`],
+  ] as const)(
+    "redacts %s at every internal emission boundary",
+    (expectedType, secret) => {
+      for (let boundaryOffset = 1; boundaryOffset < secret.length; boundaryOffset += 1) {
+        const prefix = `${"x".repeat(79)}\n`;
+        const suffixLength = 2048 + boundaryOffset - secret.length - 1;
+        const input = `${prefix}${secret}\n${"y".repeat(suffixLength)}`;
+        const redactor = new StreamingSecretRedactor(512);
+        const output = `${redactor.push(Buffer.from(input))}${redactor.flush()}`;
+
+        expect(output, `boundary offset ${boundaryOffset}`).not.toContain(secret);
+        expect(redactor.detectedTypes).toContain(expectedType);
+      }
+    }
+  );
+
+  it("preserves UTF-8 characters split across input chunks", () => {
+    const value = `before-🙂-after ghp_${"Q".repeat(40)}`;
+    const bytes = Buffer.from(value, "utf8");
+    const emojiStart = Buffer.from("before-", "utf8").length;
+    const redactor = new StreamingSecretRedactor();
+    const output = [
+      redactor.push(bytes.subarray(0, emojiStart + 2)),
+      redactor.push(bytes.subarray(emojiStart + 2)),
+      redactor.flush(),
+    ].join("");
+
+    expect(output).toContain("before-🙂-after");
+    expect(output).not.toContain(`ghp_${"Q".repeat(40)}`);
+    expect(redactor.detectedTypes).toContain("github-token");
+  });
+
   it("redacts a private key block split across stream chunks", () => {
     const redactor = new StreamingSecretRedactor(512);
     const outputs = [
@@ -53,6 +92,26 @@ describe("secret output blocker", () => {
     expect(outputs).not.toContain("A".repeat(100));
     expect(outputs).not.toContain("B".repeat(100));
     expect(outputs).toContain("[REDACTED:private-key]");
+    expect(redactor.detectedTypes).toContain("private-key");
+  });
+
+  it("never emits a private key body larger than the stream holdback", () => {
+    const redactor = new StreamingSecretRedactor(512);
+    const first = redactor.push(
+      Buffer.from(
+        `safe-prefix\n-----BEGIN PRIVATE KEY-----\n${"K".repeat(5000)}`
+      )
+    );
+    const second = redactor.push(
+      Buffer.from("\n-----END PRIVATE KEY-----\nsafe-suffix\n")
+    );
+    const output = `${first}${second}${redactor.flush()}`;
+
+    expect(output).toContain("safe-prefix");
+    expect(output).toContain("safe-suffix");
+    expect(output).toContain("[REDACTED:private-key]");
+    expect(output).not.toContain("BEGIN PRIVATE KEY");
+    expect(output).not.toContain("K".repeat(100));
     expect(redactor.detectedTypes).toContain("private-key");
   });
 

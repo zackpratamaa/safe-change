@@ -1,3 +1,4 @@
+import { StringDecoder } from "node:string_decoder";
 import type { SecretFinding, SecretType } from "../types/index.js";
 
 interface PatternDefinition {
@@ -32,11 +33,30 @@ const PATTERNS: readonly PatternDefinition[] = [
   },
 ];
 
-const PRIVATE_KEY_BEGIN = "-----BEGIN PRIVATE KEY-----";
-const RSA_PRIVATE_KEY_BEGIN = "-----BEGIN RSA PRIVATE KEY-----";
-const EC_PRIVATE_KEY_BEGIN = "-----BEGIN EC PRIVATE KEY-----";
-const OPENSSH_PRIVATE_KEY_BEGIN = "-----BEGIN OPENSSH PRIVATE KEY-----";
-const PRIVATE_KEY_END = "-----END";
+const PRIVATE_KEY_MARKERS = [
+  {
+    begin: "-----BEGIN PRIVATE KEY-----",
+    end: "-----END PRIVATE KEY-----",
+  },
+  {
+    begin: "-----BEGIN RSA PRIVATE KEY-----",
+    end: "-----END RSA PRIVATE KEY-----",
+  },
+  {
+    begin: "-----BEGIN EC PRIVATE KEY-----",
+    end: "-----END EC PRIVATE KEY-----",
+  },
+  {
+    begin: "-----BEGIN OPENSSH PRIVATE KEY-----",
+    end: "-----END OPENSSH PRIVATE KEY-----",
+  },
+] as const;
+const PRIVATE_KEY_END_PREFIX = "-----END";
+
+// This is larger than the longest bounded secret pattern. Bytes inside this
+// suffix are never emitted until enough following context exists to classify
+// a token that crosses a stream or internal emission boundary.
+const MINIMUM_STREAM_HOLDBACK = 2048;
 
 export interface RedactionResult {
   readonly text: string;
@@ -59,22 +79,19 @@ export function redactSecrets(input: string): RedactionResult {
     });
   }
 
-  const privateKeyStarts = [
-    PRIVATE_KEY_BEGIN,
-    RSA_PRIVATE_KEY_BEGIN,
-    EC_PRIVATE_KEY_BEGIN,
-    OPENSSH_PRIVATE_KEY_BEGIN,
-  ];
-  for (const marker of privateKeyStarts) {
-    let start = text.indexOf(marker);
+  for (const { begin } of PRIVATE_KEY_MARKERS) {
+    let start = text.indexOf(begin);
     while (start !== -1) {
-      const endMarkerStart = text.indexOf(PRIVATE_KEY_END, start + marker.length);
+      const endMarkerStart = text.indexOf(
+        PRIVATE_KEY_END_PREFIX,
+        start + begin.length
+      );
       const lineEnd =
         endMarkerStart === -1 ? text.length : text.indexOf("\n", endMarkerStart);
       const end = lineEnd === -1 ? text.length : lineEnd;
       findings.push({ type: "private-key", start, end });
       text = `${text.slice(0, start)}[REDACTED:private-key]${text.slice(end)}`;
-      start = text.indexOf(marker, start + 22);
+      start = text.indexOf(begin, start + 22);
     }
   }
 
@@ -87,26 +104,28 @@ export function redactSecrets(input: string): RedactionResult {
 
 export class StreamingSecretRedactor {
   private pending = "";
+  private readonly decoder = new StringDecoder("utf8");
   private readonly detected = new Set<SecretType>();
   private readonly holdbackCharacters: number;
-  private privateKeyMode = false;
+  private privateKeyEnd: string | null = null;
 
-  constructor(holdbackCharacters = 1024) {
-    this.holdbackCharacters = Math.max(512, holdbackCharacters);
+  constructor(holdbackCharacters = MINIMUM_STREAM_HOLDBACK) {
+    this.holdbackCharacters = Math.max(
+      MINIMUM_STREAM_HOLDBACK,
+      holdbackCharacters
+    );
   }
 
   public push(chunk: Buffer): string {
-    this.pending += chunk.toString("utf8");
-    if (this.pending.length <= this.holdbackCharacters) return "";
-    const splitAt = this.pending.length - this.holdbackCharacters;
-    const emit = this.pending.slice(0, splitAt);
-    this.pending = this.pending.slice(splitAt);
-    return this.redact(emit);
+    this.pending += this.decoder.write(chunk);
+    return this.drain(false);
   }
 
   public flush(): string {
-    const output = this.redact(this.pending);
+    this.pending += this.decoder.end();
+    const output = this.drain(true);
     this.pending = "";
+    this.privateKeyEnd = null;
     return output;
   }
 
@@ -114,29 +133,93 @@ export class StreamingSecretRedactor {
     return [...this.detected].sort();
   }
 
-  private redact(value: string): string {
-    if (this.privateKeyMode) {
+  private drain(flush: boolean): string {
+    let output = "";
+
+    while (this.privateKeyEnd !== null) {
       this.detected.add("private-key");
-      const end = value.indexOf(PRIVATE_KEY_END);
-      if (end === -1) return "[REDACTED:private-key]";
-      const lineEnd = value.indexOf("\n", end);
-      this.privateKeyMode = false;
-      return `[REDACTED:private-key]${value.slice(
-        lineEnd === -1 ? value.length : lineEnd
-      )}`;
+      const end = this.pending.indexOf(this.privateKeyEnd);
+      if (end === -1) {
+        if (flush) this.pending = "";
+        else {
+          const retained = Math.max(0, this.privateKeyEnd.length - 1);
+          this.pending = this.pending.slice(-retained);
+        }
+        return output;
+      }
+
+      const afterMarker = end + this.privateKeyEnd.length;
+      const newline = this.pending.indexOf("\n", afterMarker);
+      if (newline === -1 && !flush) {
+        this.pending = this.pending.slice(end);
+        return output;
+      }
+      this.pending = this.pending.slice(newline === -1 ? afterMarker : newline);
+      this.privateKeyEnd = null;
     }
-    const beginsPrivateKey = [
-      PRIVATE_KEY_BEGIN,
-      RSA_PRIVATE_KEY_BEGIN,
-      EC_PRIVATE_KEY_BEGIN,
-      OPENSSH_PRIVATE_KEY_BEGIN,
-    ].some((marker) => value.includes(marker));
-    if (beginsPrivateKey && !value.includes(PRIVATE_KEY_END)) {
-      this.privateKeyMode = true;
-      this.detected.add("private-key");
-      return "[REDACTED:private-key]";
+
+    while (true) {
+      const safeCut = flush
+        ? this.pending.length
+        : Math.max(0, this.pending.length - this.holdbackCharacters);
+      const privateKey = this.findFirstPrivateKey();
+
+      if (privateKey && (flush || privateKey.start < safeCut)) {
+        output += this.redactPrefix(privateKey.start);
+        this.pending = this.pending.slice(privateKey.start + privateKey.begin.length);
+        this.detected.add("private-key");
+        output += "[REDACTED:private-key]";
+        this.privateKeyEnd = privateKey.end;
+        output += this.drain(flush);
+        return output;
+      }
+
+      if (safeCut === 0) return output;
+      const completeCut = this.extendCutThroughBoundedSecret(safeCut);
+      output += this.redactPrefix(completeCut);
+      this.pending = this.pending.slice(completeCut);
+      if (!flush) return output;
+      if (this.pending.length === 0) return output;
     }
-    const result = redactSecrets(value);
+  }
+
+  private findFirstPrivateKey():
+    | { readonly start: number; readonly begin: string; readonly end: string }
+    | undefined {
+    let first:
+      | { readonly start: number; readonly begin: string; readonly end: string }
+      | undefined;
+    for (const marker of PRIVATE_KEY_MARKERS) {
+      const start = this.pending.indexOf(marker.begin);
+      if (start !== -1 && (!first || start < first.start)) {
+        first = { start, begin: marker.begin, end: marker.end };
+      }
+    }
+    return first;
+  }
+
+  private extendCutThroughBoundedSecret(initialCut: number): number {
+    let cut = initialCut;
+    let extended = true;
+    while (extended) {
+      extended = false;
+      for (const definition of PATTERNS) {
+        definition.pattern.lastIndex = 0;
+        for (const match of this.pending.matchAll(definition.pattern)) {
+          const start = match.index;
+          const end = start + match[0].length;
+          if (start < cut && end > cut) {
+            cut = end;
+            extended = true;
+          }
+        }
+      }
+    }
+    return cut;
+  }
+
+  private redactPrefix(length: number): string {
+    const result = redactSecrets(this.pending.slice(0, length));
     for (const type of result.detectedTypes) this.detected.add(type);
     return result.text;
   }
