@@ -3,7 +3,7 @@
   "status": "blocked",
   "candidateSha": null,
   "stabilization": {
-    "minimumDays": null,
+    "minimumDays": 14,
     "startedOn": null,
     "endedOn": null,
     "testedRuns": [],
