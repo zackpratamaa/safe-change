@@ -312,6 +312,23 @@ async function main() {
   }
 }
 main().catch((error) => {
-  console.error("SMOKE TEST FAILED:", error.message);
+  const output = (value) =>
+    value === undefined || value === null
+      ? undefined
+      : String(value).slice(-12_000);
+  console.error(
+    "SMOKE TEST FAILED:",
+    JSON.stringify(
+      {
+        message: error.message,
+        status: error.status,
+        signal: error.signal,
+        stdout: output(error.stdout),
+        stderr: output(error.stderr),
+      },
+      null,
+      2,
+    ),
+  );
   process.exit(1);
 });
