@@ -12,7 +12,8 @@
         "url": "https://github.com/zackpratamaa/safe-change/actions/runs/39656102889"
       }
     ],
-    "incidents": []
+    "incidents": [],
+    "targetEvaluationAt": "2026-11-05T00:00:00Z"
   },
   "independentSecurityReview": {
     "status": "not-started",
