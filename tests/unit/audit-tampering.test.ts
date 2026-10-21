@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFile, unlink, writeFile } from "node:fs/promises";
+import { readFile, symlink, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createTempRepo, type TempRepo } from "../helpers/temp-repo.js";
 import { appendAuditEvent, readAuditEvents, verifyAuditEvents } from "../../src/integrity/audit-log.js";
@@ -58,6 +58,23 @@ describe("retained audit state corruption and historical-witness limits", () => 
     expect(await runAudit({ format: "json" })).toBe(ExitCodes.NEW_FAILURE);
     expect(JSON.parse(output.mock.calls.map(call => String(call[0])).join("")).valid).toBe(false);
   });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a symbolic-link audit destination without reading or overwriting its target",
+    async () => {
+      const outside = join(repo.path, "outside-events.jsonl");
+      const original = "outside content\n";
+      await writeFile(outside, original);
+      await unlink(path);
+      await symlink(outside, path);
+
+      await expect(readAuditEvents(repo.path)).rejects.toThrow(/regular|symbolic/i);
+      await expect(
+        appendAuditEvent(repo.path, "THIRD", null, {})
+      ).rejects.toThrow(/regular|symbolic/i);
+      expect(await readFile(outside, "utf8")).toBe(original);
+    }
+  );
 
   it("documents the limit: a consistent prefix and complete deletion have no local historical witness", async () => {
     const events = await readAuditEvents(repo.path);
