@@ -1,9 +1,11 @@
-import { appendFile, mkdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import {
+  readStateFile,
+  writeStateFileAtomically,
+} from "../security/state-files.js";
 import type { AuditEvent } from "../types/index.js";
+import { withStateLock } from "../security/state-lock.js";
 import { stableDigest } from "./hash.js";
 
-const STATE_DIR = ".safe-change";
 const EVENT_FILE = "events.jsonl";
 
 export class AuditLogError extends Error {
@@ -16,9 +18,10 @@ export class AuditLogError extends Error {
 export async function readAuditEvents(repoRoot: string): Promise<AuditEvent[]> {
   let content: string;
   try {
-    content = await readFile(join(repoRoot, STATE_DIR, EVENT_FILE), "utf8");
+    const stored = await readStateFile(repoRoot, EVENT_FILE);
+    if (stored === null) return [];
+    content = stored;
   } catch (error: unknown) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw new AuditLogError(`Failed to read audit log: ${String(error)}`);
   }
   const events: AuditEvent[] = [];
@@ -76,30 +79,32 @@ export async function appendAuditEvent(
   sessionId: string | null,
   payload: unknown
 ): Promise<AuditEvent> {
-  const events = await readAuditEvents(repoRoot);
-  if (!verifyAuditEvents(events)) {
-    throw new AuditLogError("Audit log integrity verification failed.");
-  }
-  const previousDigest = events.at(-1)?.eventDigest ?? null;
-  const unsigned = {
-    schemaVersion: 1 as const,
-    sequence: events.length + 1,
-    timestamp: new Date().toISOString(),
-    type,
-    sessionId,
-    payloadDigest: stableDigest(payload),
-    previousDigest,
-  };
-  const event: AuditEvent = {
-    ...unsigned,
-    eventDigest: stableDigest(unsigned),
-  };
-  const stateDir = join(repoRoot, STATE_DIR);
-  await mkdir(stateDir, { recursive: true });
-  await appendFile(
-    join(stateDir, EVENT_FILE),
-    `${JSON.stringify(event)}\n`,
-    "utf8"
-  );
-  return event;
+  return withStateLock(repoRoot, "audit-write.lock", async () => {
+    // Re-read and verify only after acquiring exclusive ownership. Computing the
+    // sequence or previous digest outside this lock permits two writers to
+    // create individually valid events that corrupt the chain when appended.
+    const events = await readAuditEvents(repoRoot);
+    if (!verifyAuditEvents(events)) {
+      throw new AuditLogError("Audit log integrity verification failed.");
+    }
+    const previousDigest = events.at(-1)?.eventDigest ?? null;
+    const unsigned = {
+      schemaVersion: 1 as const,
+      sequence: events.length + 1,
+      timestamp: new Date().toISOString(),
+      type,
+      sessionId,
+      payloadDigest: stableDigest(payload),
+      previousDigest,
+    };
+    const event: AuditEvent = {
+      ...unsigned,
+      eventDigest: stableDigest(unsigned),
+    };
+    const content = `${[...events, event]
+      .map(existing => JSON.stringify(existing))
+      .join("\n")}\n`;
+    await writeStateFileAtomically(repoRoot, EVENT_FILE, content);
+    return event;
+  });
 }
