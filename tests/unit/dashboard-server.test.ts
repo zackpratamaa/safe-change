@@ -7,6 +7,7 @@ import {
   type DashboardServerInstance,
 } from "../../src/dashboard/server.js";
 import { appendEntry, createLogEntry } from "../../src/log/log-manager.js";
+import { createTempRepo } from "../helpers/temp-repo.js";
 
 describe("Dashboard server", () => {
   let tempDir: string;
@@ -147,6 +148,8 @@ describe("Dashboard server", () => {
   });
 
   it("GET /api/enterprise returns enterprise assessment and policy", async () => {
+    await rm(tempDir, { recursive: true, force: true });
+    tempDir = (await createTempRepo()).path;
     serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
     const res = await fetch(`${serverInstance.url}/api/enterprise`);
     expect(res.status).toBe(200);

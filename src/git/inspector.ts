@@ -1,6 +1,7 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, lstat, readlink } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, readFile, lstat, readlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { FileEntry, FileStatus, GitState } from "../types/index.js";
 
@@ -222,44 +223,66 @@ export async function getDiffText(
     maxBytes = pathsOrMaxBytes;
   } else if (Array.isArray(pathsOrMaxBytes)) {
     paths = pathsOrMaxBytes;
-    if (typeof maxBytesArg === "number") {
-      maxBytes = maxBytesArg;
-    }
+    if (typeof maxBytesArg === "number") maxBytes = maxBytesArg;
   }
-
+  if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+    throw new GitError("Diff output limit must be a positive safe integer.");
+  }
   if (paths !== undefined && paths.length === 0) {
     return { text: "", truncated: false, linesAdded: 0, linesRemoved: 0 };
   }
 
-  const gitArgs = ["diff", "HEAD", "--stat", "--patch"];
-  if (paths !== undefined && paths.length > 0) {
-    gitArgs.push("--", ...paths);
-  }
+  const pathArgs = paths === undefined ? [] : ["--", ...paths];
+  const [patch, numstat, untrackedResult] = await Promise.all([
+    gitBounded(repoRoot, ["diff", "HEAD", "--stat", "--patch", ...pathArgs], maxBytes),
+    gitBounded(
+      repoRoot,
+      ["diff", "--numstat", "--no-renames", "-z", "HEAD", ...pathArgs],
+      MAX_GIT_METADATA_BYTES
+    ),
+    gitBounded(
+      repoRoot,
+      ["ls-files", "--others", "--exclude-standard", "-z", ...pathArgs],
+      MAX_GIT_METADATA_BYTES
+    ),
+  ]);
 
-  const result = await git(repoRoot, gitArgs);
-
-  let text = result.stdout;
-  let truncated = false;
-
-  if (Buffer.byteLength(text, "utf-8") > maxBytes) {
-    const buf = Buffer.from(text, "utf-8");
-    text = buf.subarray(0, maxBytes).toString("utf-8");
-    truncated = true;
-  }
+  assertSuccessfulGit("git diff", patch);
+  assertCompleteMetadata("git diff --numstat", numstat);
+  assertCompleteMetadata("git ls-files --others", untrackedResult);
 
   let linesAdded = 0;
   let linesRemoved = 0;
-  for (const line of result.stdout.split("\n")) {
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      linesAdded++;
-    } else if (line.startsWith("-") && !line.startsWith("---")) {
-      linesRemoved++;
+  for (const record of numstat.stdout.split("\0")) {
+    if (!record) continue;
+    const match = /^(\d+|-)\t(\d+|-)\t/.exec(record);
+    if (!match) {
+      throw new GitError("git diff --numstat returned an unrecognized record.");
     }
+    linesAdded = safeAdd(linesAdded, match[1] === "-" ? 0 : Number(match[1]));
+    linesRemoved = safeAdd(linesRemoved, match[2] === "-" ? 0 : Number(match[2]));
   }
 
-  return { text, truncated, linesAdded, linesRemoved };
-}
+  const untracked = untrackedResult.stdout
+    .split("\0")
+    .filter(filePath => filePath.length > 0 && !isExcluded(filePath));
+  for (const filePath of untracked) {
+    linesAdded = safeAdd(
+      linesAdded,
+      await countUntrackedTextLines(repoRoot, filePath)
+    );
+  }
 
+  return {
+    text: patch.stdout,
+    // Untracked contents are included in exact line metrics but not represented
+    // by `git diff HEAD`; mark the presentation text incomplete rather than
+    // silently presenting it as the full semantic patch.
+    truncated: patch.truncated || untracked.length > 0,
+    linesAdded,
+    linesRemoved,
+  };
+}
 // Internal helpers
 
 function classifyStatus(
@@ -312,6 +335,146 @@ interface GitResult {
   exitCode: number;
   stdout: string;
   stderr: string;
+}
+
+const MAX_GIT_METADATA_BYTES = 64 * 1024 * 1024;
+const MAX_GIT_ERROR_BYTES = 64 * 1024;
+
+interface BoundedGitResult extends GitResult {
+  readonly truncated: boolean;
+  readonly timedOut: boolean;
+}
+
+function gitBounded(
+  cwd: string,
+  args: readonly string[],
+  maxBytes: number
+): Promise<BoundedGitResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let truncated = false;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill();
+    }, 30_000);
+
+    child.stdout.on("data", (chunk: Buffer) => {
+      const remaining = maxBytes - stdoutBytes;
+      if (remaining > 0) {
+        const retained = chunk.subarray(0, remaining);
+        stdout.push(retained);
+        stdoutBytes += retained.length;
+      }
+      if (chunk.length > remaining) truncated = true;
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      const remaining = MAX_GIT_ERROR_BYTES - stderrBytes;
+      if (remaining > 0) {
+        const retained = chunk.subarray(0, remaining);
+        stderr.push(retained);
+        stderrBytes += retained.length;
+      }
+    });
+    child.once("error", error => {
+      clearTimeout(timer);
+      reject(new GitError(`Failed to execute git: ${String(error)}`));
+    });
+    child.once("close", code => {
+      clearTimeout(timer);
+      resolve({
+        exitCode: typeof code === "number" ? code : 128,
+        stdout: Buffer.concat(stdout, stdoutBytes).toString("utf8"),
+        stderr: Buffer.concat(stderr, stderrBytes).toString("utf8"),
+        truncated,
+        timedOut,
+      });
+    });
+  });
+}
+
+function assertSuccessfulGit(command: string, result: BoundedGitResult): void {
+  if (result.timedOut) throw new GitError(`${command} timed out.`);
+  if (result.exitCode !== 0) {
+    throw new GitError(
+      `${command} failed with exit code ${result.exitCode}: ${result.stderr || "no diagnostic output"}`
+    );
+  }
+}
+
+function assertCompleteMetadata(command: string, result: BoundedGitResult): void {
+  assertSuccessfulGit(command, result);
+  if (result.truncated) {
+    throw new GitError(`${command} exceeded the bounded metadata limit.`);
+  }
+}
+
+function safeAdd(total: number, value: number): number {
+  const next = total + value;
+  if (!Number.isSafeInteger(value) || value < 0 || !Number.isSafeInteger(next)) {
+    throw new GitError("Diff line count exceeded the safe integer range.");
+  }
+  return next;
+}
+
+async function countUntrackedTextLines(
+  repoRoot: string,
+  filePath: string
+): Promise<number> {
+  const path = join(repoRoot, filePath);
+  const expected = await lstat(path);
+  if (expected.isSymbolicLink() || !expected.isFile()) return 0;
+  if (!Number.isSafeInteger(expected.size)) {
+    throw new GitError(`Untracked file "${filePath}" is too large to count safely.`);
+  }
+
+  const handle = await open(
+    path,
+    constants.O_RDONLY |
+      (constants.O_NOFOLLOW ?? 0) |
+      (constants.O_NONBLOCK ?? 0)
+  );
+  try {
+    const actual = await handle.stat();
+    if (
+      !actual.isFile() ||
+      actual.dev !== expected.dev ||
+      actual.ino !== expected.ino ||
+      actual.size !== expected.size
+    ) {
+      throw new GitError(`Untracked file "${filePath}" changed during inspection.`);
+    }
+    let bytesReadTotal = 0;
+    let lines = 0;
+    let lastByte = -1;
+    while (true) {
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+      if (bytesRead === 0) break;
+      const chunk = buffer.subarray(0, bytesRead);
+      bytesReadTotal += bytesRead;
+      if (!Number.isSafeInteger(bytesReadTotal)) {
+        throw new GitError(`Untracked file "${filePath}" is too large to count safely.`);
+      }
+      if (chunk.includes(0)) return 0;
+      for (const byte of chunk) if (byte === 0x0a) lines = safeAdd(lines, 1);
+      lastByte = chunk[chunk.length - 1]!;
+    }
+    if (bytesReadTotal !== actual.size) {
+      throw new GitError(`Untracked file "${filePath}" changed during inspection.`);
+    }
+    return bytesReadTotal > 0 && lastByte !== 0x0a ? safeAdd(lines, 1) : lines;
+  } finally {
+    await handle.close();
+  }
 }
 
 function git(cwd: string, args: string[]): Promise<GitResult> {

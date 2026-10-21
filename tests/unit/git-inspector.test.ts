@@ -234,16 +234,46 @@ describe("git/inspector", () => {
       expect(result.text).toContain("modified");
     });
 
+    it("counts every line in untracked text files", async () => {
+      repo = await createTempRepo();
+      await repo.writeFile(
+        "untracked.txt",
+        Array.from({ length: 10_000 }, (_, index) => `line-${index}`).join("\n") + "\n"
+      );
+
+      const result = await getDiffText(repo.path);
+      expect(result.linesAdded).toBe(10_000);
+      expect(result.linesRemoved).toBe(0);
+      expect(result.truncated).toBe(true);
+    });
+
+    it("does not count untracked binary files as text additions", async () => {
+      repo = await createTempRepo();
+      await writeFile(join(repo.path, "binary.bin"), Buffer.from([1, 2, 0, 3, 10]));
+
+      const result = await getDiffText(repo.path);
+      expect(result.linesAdded).toBe(0);
+      expect(result.linesRemoved).toBe(0);
+      expect(result.truncated).toBe(true);
+    });
+
     it("should truncate large diffs", async () => {
       repo = await createTempRepo();
-      const bigContent = "x".repeat(200_000) + "\n";
-      await repo.writeFile("big.txt", bigContent);
+      await repo.writeFile("big.txt", "original\n");
       await repo.git("add", "big.txt");
       await repo.git("commit", "-m", "add big");
-      await repo.writeFile("big.txt", "y".repeat(200_000) + "\n");
+      const lineCount = 140_000;
+      await repo.writeFile(
+        "big.txt",
+        Array.from({ length: lineCount }, (_, index) =>
+          `${String(index).padStart(8, "0")}-${"y".repeat(72)}`
+        ).join("\n") + "\n"
+      );
 
       const result = await getDiffText(repo.path, 1000);
       expect(result.truncated).toBe(true);
+      expect(result.linesAdded).toBe(lineCount);
+      expect(result.linesRemoved).toBe(1);
     });
   });
 });

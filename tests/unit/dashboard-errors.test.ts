@@ -50,6 +50,19 @@ describe("Dashboard Server Failure Paths & Error Responses", () => {
     expect(body.rules).toEqual([]);
   });
 
+  it("fails closed instead of returning zero enterprise metrics when Git inspection fails", async () => {
+    serverInstance = await startDashboardServer({
+      port: 0,
+      repoRoot: tempDir,
+    });
+
+    const response = await fetch(`${serverInstance.url}/api/enterprise`);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: "Failed to evaluate enterprise risk",
+    });
+  });
+
   it("fails to bind when explicit port is already occupied", async () => {
     serverInstance = await startDashboardServer({
       port: 0,
