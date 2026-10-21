@@ -144,8 +144,8 @@ export async function createDashboardServer(
         const config = await loadConfig(repoRoot).catch(() => null);
         const policy = config?.enterprisePolicy ?? DEFAULT_ENTERPRISE_POLICY;
         const baseline = await loadBaseline(repoRoot).catch(() => null);
-        const currentFiles = await getFileEntries(repoRoot).catch(() => ({}));
-        const diff = await getDiffText(repoRoot).catch(() => ({ text: "", truncated: false, linesAdded: 0, linesRemoved: 0 }));
+        const currentFiles = await getFileEntries(repoRoot);
+        const diff = await getDiffText(repoRoot);
         const fileChanges = baseline
           ? compareFiles(baseline.files, currentFiles)
           : {
