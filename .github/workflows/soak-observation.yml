@@ -1,0 +1,139 @@
+name: Candidate Soak Observation
+
+on:
+  push:
+    branches: [main, ci/14-day-soak-observation]
+    paths: [.github/workflows/soak-observation.yml]
+  workflow_dispatch:
+  schedule:
+    - cron: '23 2 * * *' # 09:23 Asia/Jakarta; scheduling can be delayed.
+
+permissions:
+  contents: read
+
+# Never cancel earlier attempts or move the tested candidate with main.
+concurrency:
+  group: candidate-soak-${{ github.ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  SOAK_CANDIDATE_SHA: 5e99b4f12b27890df22ea5bb4e4e0151c68b89ec
+
+jobs:
+  window:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      active: ${{ steps.window.outputs.active }}
+    steps:
+      - id: window
+        name: Bound automated observation window
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE' >> "$GITHUB_OUTPUT"
+          // A planned cutoff, not evidence of completed soak time.
+          const cutoff = Date.parse('2026-11-06T00:00:00Z');
+          console.log(`active=${Date.now() < cutoff}`);
+          NODE
+
+  observe:
+    name: Candidate observation (${{ matrix.os }})
+    needs: window
+    if: needs.window.outputs.active == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout frozen candidate, not workflow revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SOAK_CANDIDATE_SHA }}
+          persist-credentials: false
+      - name: Record actual source and start time
+        run: |
+          mkdir -p observation-evidence
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { writeFileSync } from 'node:fs';
+          const sourceSha = execFileSync('git', ['rev-parse', 'HEAD'], {encoding:'utf8'}).trim();
+          if (sourceSha !== process.env.SOAK_CANDIDATE_SHA) throw new Error('Candidate SHA mismatch');
+          writeFileSync('observation-evidence/start.json', JSON.stringify({
+            sourceSha, workflowSha: process.env.GITHUB_SHA,
+            startedAt: new Date().toISOString(), os: process.env.RUNNER_OS,
+            runUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            attempt: process.env.GITHUB_RUN_ATTEMPT,
+            mode: 'periodic-regression-not-continuous-process-soak'
+          }, null, 2));
+          NODE
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.2.0
+        with:
+          node-version: 20.x
+          cache: npm
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Configure test identity
+        run: |
+          git config --global user.email 'ci@safe-change.local'
+          git config --global user.name 'CI Runner'
+      - name: Install Linux sandbox dependency
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bubblewrap
+          bwrap --version
+      - name: Install locked dependencies
+        run: npm ci 2>&1 | tee observation-evidence/install.log
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high 2>&1 | tee observation-evidence/dependency-audit.log
+      - name: Check version parity and types
+        run: |
+          node scripts/sync-version.mjs --check 2>&1 | tee observation-evidence/version.log
+          npm run lint 2>&1 | tee observation-evidence/lint.log
+      - name: Build frozen candidate
+        run: npm run build 2>&1 | tee observation-evidence/build.log
+      - name: Evaluate semantic corpus
+        run: node tests/benchmarks/semantic-corpus.mjs 2>&1 | tee observation-evidence/semantic-corpus.log
+      - name: Run full suite with unchanged coverage thresholds
+        run: npm run test:coverage 2>&1 | tee observation-evidence/coverage.log
+      - name: Repeat concurrency, state, replay and dashboard regression checks
+        run: |
+          for round in 1 2 3; do
+            echo "Round $round started at $(date -u +%FT%TZ)" | tee "observation-evidence/regression-$round.log"
+            node node_modules/vitest/vitest.mjs run tests/integration/audit-cross-process.test.ts tests/unit/state-lock.test.ts tests/unit/state-lock-unlink-race.test.ts tests/unit/state-lock-windows-sharing.test.ts tests/unit/audit-tampering.test.ts tests/unit/baseline-storage-integrity.test.ts tests/unit/replay-drift-corpus.test.ts tests/unit/dashboard-server.test.ts tests/unit/dashboard-browser.test.ts 2>&1 | tee -a "observation-evidence/regression-$round.log"
+          done
+      - name: Exercise candidate package and packaged Java
+        env:
+          SAFE_CHANGE_TEST_PACKAGED_JAVA: '1'
+        run: node scripts/smoke-test-tarball.mjs 2>&1 | tee observation-evidence/package-smoke.log
+      - name: Record outcome, including failures
+        if: always()
+        env:
+          OBSERVATION_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p observation-evidence
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          writeFileSync('observation-evidence/outcome.json', JSON.stringify({
+            expectedSourceSha: process.env.SOAK_CANDIDATE_SHA,
+            finishedAt: new Date().toISOString(), status: process.env.OBSERVATION_STATUS,
+            os: process.env.RUNNER_OS, attempt: process.env.GITHUB_RUN_ATTEMPT
+          }, null, 2));
+          NODE
+      - name: Preserve evidence for every attempt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate-soak-${{ matrix.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            observation-evidence/
+            coverage/coverage-summary.json
+          retention-days: 90
+          if-no-files-found: error
