@@ -2,12 +2,43 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { request } from "node:http";
 import {
   startDashboardServer,
   type DashboardServerInstance,
 } from "../../src/dashboard/server.js";
 import { appendEntry, createLogEntry } from "../../src/log/log-manager.js";
 import { createTempRepo } from "../helpers/temp-repo.js";
+
+async function requestWithHost(
+  target: string,
+  host: string,
+): Promise<{ status: number; body: unknown }> {
+  const url = new URL(target);
+  return await new Promise((resolve, reject) => {
+    const req = request(
+      {
+        hostname: url.hostname,
+        port: url.port,
+        path: url.pathname,
+        method: "GET",
+        headers: { Host: host },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () =>
+          resolve({
+            status: res.statusCode ?? 0,
+            body: JSON.parse(Buffer.concat(chunks).toString("utf8")),
+          }),
+        );
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
 
 describe("Dashboard server", () => {
   let tempDir: string;
@@ -78,7 +109,7 @@ describe("Dashboard server", () => {
     await writeFile(
       join(tempDir, ".safe-change.json"),
       JSON.stringify(configContent),
-      "utf-8"
+      "utf-8",
     );
 
     serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
@@ -96,7 +127,9 @@ describe("Dashboard server", () => {
     const res = await fetch(`${serverInstance.url}/`);
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/html");
-    expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
+    expect(res.headers.get("content-security-policy")).toContain(
+      "default-src 'self'",
+    );
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
 
@@ -106,6 +139,63 @@ describe("Dashboard server", () => {
     expect(text).toContain("Panel 2");
     expect(text).toContain("Panel 3");
     expect(text).toContain("Panel 4");
+  });
+
+  it("uses a distinct unguessable session path for each server", async () => {
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    const firstUrl = new URL(serverInstance.url);
+    expect(firstUrl.pathname).toMatch(/^\/[0-9a-f]{64}$/);
+
+    const secondInstance = await startDashboardServer({
+      port: 0,
+      repoRoot: tempDir,
+    });
+    try {
+      expect(new URL(secondInstance.url).pathname).toMatch(/^\/[0-9a-f]{64}$/);
+      expect(secondInstance.url).not.toBe(serverInstance.url);
+    } finally {
+      await secondInstance.close();
+    }
+  });
+
+  it("rejects tokenless dashboard API requests", async () => {
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    const dashboardUrl = new URL(serverInstance.url);
+    const res = await fetch(`${dashboardUrl.origin}/api/status`);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Not Found" });
+  });
+
+  it("rejects DNS-rebinding Host headers", async () => {
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    const res = await requestWithHost(
+      `${serverInstance.url}/api/status`,
+      "attacker.example",
+    );
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: "Forbidden" });
+  });
+
+  it("rejects cross-origin browser requests", async () => {
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    const res = await fetch(`${serverInstance.url}/api/status`, {
+      headers: { Origin: "https://attacker.example" },
+    });
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "Forbidden" });
+  });
+
+  it("sets no-store and no-referrer headers on HTML and JSON", async () => {
+    serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
+    for (const path of ["/", "/api/status"]) {
+      const res = await fetch(`${serverInstance.url}${path}`);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(res.headers.get("cross-origin-resource-policy")).toBe(
+        "same-origin",
+      );
+    }
   });
 
   it("binds only to 127.0.0.1", async () => {
@@ -184,7 +274,10 @@ describe("Dashboard server", () => {
     const path = await import("node:path");
     const auditDir = path.join(tempDir, ".safe-change");
     await fs.mkdir(auditDir, { recursive: true });
-    await fs.writeFile(path.join(auditDir, "events.jsonl"), "corrupt-non-json-line\n");
+    await fs.writeFile(
+      path.join(auditDir, "events.jsonl"),
+      "corrupt-non-json-line\n",
+    );
 
     serverInstance = await startDashboardServer({ port: 0, repoRoot: tempDir });
     const res = await fetch(`${serverInstance.url}/api/audit`);
