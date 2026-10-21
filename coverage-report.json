@@ -1,37 +1,37 @@
 {
   "schemaVersion": 1,
   "repository": "zackpratamaa/safe-change",
-  "sourceSha": "ae910336d67946fcc8c269c41505b46fb2dd1913",
-  "runUrl": "https://github.com/zackpratamaa/safe-change/actions/runs/39630339678",
+  "sourceSha": "8e7466d281697d85cedba12299db6f3698f8fb7c",
+  "runUrl": "https://github.com/zackpratamaa/safe-change/actions/runs/39633348610",
   "command": "npm run test:coverage",
   "platform": "ubuntu-latest",
   "scope": "V8 source coverage using the committed vitest.config.ts include/exclude rules; not all repository code or a security assurance score",
-  "configUrl": "https://github.com/zackpratamaa/safe-change/blob/ae910336d67946fcc8c269c41505b46fb2dd1913/vitest.config.ts",
+  "configUrl": "https://github.com/zackpratamaa/safe-change/blob/8e7466d281697d85cedba12299db6f3698f8fb7c/vitest.config.ts",
   "configSha256": "d47a36d5362f996543ed5b96b4c5490e53943bd0d584d120394a19590248567e",
   "total": {
     "lines": {
-      "total": 5659,
-      "covered": 4504,
+      "total": 5660,
+      "covered": 4506,
       "skipped": 0,
-      "pct": 79.59
+      "pct": 79.61
     },
     "statements": {
-      "total": 6053,
-      "covered": 4784,
+      "total": 6054,
+      "covered": 4786,
       "skipped": 0,
-      "pct": 79.03
+      "pct": 79.05
     },
     "functions": {
-      "total": 681,
-      "covered": 601,
+      "total": 683,
+      "covered": 603,
       "skipped": 0,
-      "pct": 88.25
+      "pct": 88.28
     },
     "branches": {
       "total": 4687,
-      "covered": 3299,
+      "covered": 3300,
       "skipped": 0,
-      "pct": 70.38
+      "pct": 70.4
     },
     "branchesTrue": {
       "total": 0,
