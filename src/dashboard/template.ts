@@ -1,5 +1,5 @@
 export function renderDashboardHtml(nonce?: string): string {
-  const nonceAttr = nonce ? ` nonce="${nonce.replace(/"/g, '&quot;')}"` : "";
+  const nonceAttr = nonce ? ` nonce="${nonce.replace(/"/g, "&quot;")}"` : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1472,6 +1472,10 @@ export function renderDashboardHtml(nonce?: string): string {
     }
 
     async function loadData() {
+      const dashboardBasePath = window.location.pathname.endsWith('/')
+        ? window.location.pathname.slice(0, -1)
+        : window.location.pathname;
+      const dashboardFetch = (path) => fetch(dashboardBasePath + path);
       try {
         const [
           statusRes,
@@ -1483,14 +1487,14 @@ export function renderDashboardHtml(nonce?: string): string {
           identityRes,
           verifiableRes
         ] = await Promise.all([
-          fetch('/api/status').then(r => r.json()).catch(() => ({ hasBaseline: false })),
-          fetch('/api/log').then(r => r.json()).catch(() => []),
-          fetch('/api/rules').then(r => r.json()).catch(() => []),
-          fetch('/api/enterprise').then(r => r.json()).catch(() => null),
-          fetch('/api/lease').then(r => r.json()).catch(() => ({ active: false })),
-          fetch('/api/audit').then(r => { if (!r.ok) throw new Error('Audit status unavailable'); return r.json(); }).catch(() => ({ verified: false, unavailable: true, totalEvents: 0, events: [] })),
-          fetch('/api/identity').then(r => r.json()).catch(() => ({ version: 1, identities: [] })),
-          fetch('/api/verifiable').then(r => r.json()).catch(() => ({ semanticReport: null, attestations: [], replays: [] }))
+          dashboardFetch('/api/status').then(r => r.json()).catch(() => ({ hasBaseline: false })),
+          dashboardFetch('/api/log').then(r => r.json()).catch(() => []),
+          dashboardFetch('/api/rules').then(r => r.json()).catch(() => []),
+          dashboardFetch('/api/enterprise').then(r => r.json()).catch(() => null),
+          dashboardFetch('/api/lease').then(r => r.json()).catch(() => ({ active: false })),
+          dashboardFetch('/api/audit').then(r => { if (!r.ok) throw new Error('Audit status unavailable'); return r.json(); }).catch(() => ({ verified: false, unavailable: true, totalEvents: 0, events: [] })),
+          dashboardFetch('/api/identity').then(r => r.json()).catch(() => ({ version: 1, identities: [] })),
+          dashboardFetch('/api/verifiable').then(r => r.json()).catch(() => ({ semanticReport: null, attestations: [], replays: [] }))
         ]);
 
         globalLogEntries = Array.isArray(logRes) ? logRes : [];
