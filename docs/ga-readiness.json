@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "status": "blocked",
+  "candidateSha": null,
+  "stabilization": {
+    "minimumDays": null,
+    "startedOn": null,
+    "endedOn": null,
+    "testedRuns": [],
+    "incidents": []
+  },
+  "independentSecurityReview": {
+    "status": "not-started",
+    "provider": null,
+    "reportUrl": null,
+    "auditedSha": null,
+    "retestSha": null,
+    "scopes": [],
+    "openCriticalFindings": null,
+    "openHighFindings": null
+  },
+  "releaseApproval": {
+    "approved": false,
+    "decisionUrl": null,
+    "approvers": []
+  }
+}
