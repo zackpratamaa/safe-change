@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 napi = { version = "2", default-features = false, features = ["napi4"] }
-napi-derive = "2"
+napi-derive = "3"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["fileapi", "handleapi", "winbase", "winerror", "minwindef", "errhandlingapi", "winnt"] }
